@@ -374,7 +374,7 @@ function viewQuiz() {
     <span style="margin-left:auto">掌握 <b>${pct}%</b></span></div>
   <div class="bar"><i style="width:${pct}%"></i></div>
   <div class="card" id="qcard">${questionHTML()}</div>
-  <button class="btn" data-act="reset" style="margin-top:8px">重設進度</button>`;
+  <button class="btn" data-act="reset" style="margin-top:8px">${state.confirmReset ? '再按一次確認清除' : '重設進度'}</button>`;
 }
 
 function questionHTML() {
@@ -460,10 +460,11 @@ function init() {
         }
       } else if (act === 'next') { newQuestion(); render(); }
       else if (act === 'reset') {
-        if (confirm('確定要清除所有測驗進度嗎？')) {
+        if (state.confirmReset) {
+          state.confirmReset = false;
           state.boxes = {}; state.stats = { right: 0, wrong: 0, streak: 0, best: 0 };
           store.set('boxes', {}); store.set('stats', state.stats); state.q = null; render();
-        }
+        } else { state.confirmReset = true; render(); }
       }
       return;
     }
