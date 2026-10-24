@@ -521,30 +521,9 @@ function viewSong() {
     <button class="btn" data-act="bpmset" data-v="${song.bpm}">原速 ${song.bpm}</button>
   </div>
   <div class="nowpanel" id="nowpanel" data-bar="${sg.sel}">${songPanelInner(sg.sel)}</div>
-  <div class="barsgrid">${grid}</div>
-  ${songDetail(plan[sg.sel])}`;
+  <div class="barsgrid">${grid}</div>`;
 }
 const bpmNow = () => state.song.bpm;
-
-function songDetail(bar) {
-  const rules = bar.chords.map(c => `${c.rule}：<b>${c.notes.map(fmtN).join(' ')}</b>`).join('<br>');
-  const seq = bar.beats.map((b, i) => `<span class="small">${i + 1} 拍</span> ${noteLabel(b, false)} <span class="small">${STRINGS[b.s]} 弦 ${b.f} 格${b.fin ? '　' + FINGER[b.fin] + '指' : ''}</span>`).join('<br>');
-  // 減和弦的指法之後再補，這裡先不顯示指型圖和手指
-  const shapes = bar.chords.map(c => {
-    if (c.q === 'd') return `<div class="shape small">${fmtN(c.sym)} · 減和弦的指型之後補上</div>`;
-    const fr = c.pos.pts.map(p => p.f), from = Math.max(1, Math.min(...fr) - 1), to = Math.max(Math.max(...fr) + 1, from + 4);
-    const marks = c.pos.pts.map(p => ({ s: p.s, f: p.f, cls: ptCls(p.r), label: p.r, fin: p.fin }));
-    return `<div class="shape"><h4>${fmtN(c.sym)} · ${Q[c.q].full}（${STRINGS[c.pos.s]} 弦根音）</h4>${boardSVG({ from, to, marks, width: 190, aria: '和弦指型' })}</div>`;
-  }).join('');
-  return `<div class="card">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">第 ${bar.n} 小節（${bar.sec} 段）</h2>
-      <button class="btn" data-act="songbarplay">▶ 試聽這小節</button></div>
-    <div class="row" style="margin:8px 0"><button class="btn" data-act="songfrom">從這小節開始循環</button><button class="btn" data-act="songto">循環到這小節</button></div>
-    <p class="small">${rules}</p>
-    <p class="beatseq" style="line-height:2">${seq}</p>
-    <div class="shapes">${shapes}</div>
-  </div>`;
-}
 
 function songBeatHz(b) { return fretHz(b.s, b.f); }
 // 目前小節的指板：四拍的位置各標上拍數，播放時光圈在音與音之間滑動
@@ -852,9 +831,6 @@ function init() {
         render();
         if (!sg.playing) songBarPlay(curPlan()[i]); // 點小節就彈這一小節，並在指板上依序亮起
       } else if (act === 'songplay') { if (state.song.playing) songStop(); else songStart(); render(); }
-      else if (act === 'songbarplay') songBarPlay(curPlan()[state.song.sel]);
-      else if (act === 'songfrom') { const sg = state.song; setSongRange(sg.sel, Math.max(sg.sel, songHi())); render(); }
-      else if (act === 'songto') { const sg = state.song; setSongRange(Math.min(sg.from, sg.sel), sg.sel); render(); }
       else if (act === 'bpmset') { state.song.bpm = +a.dataset.v; store.set('bpm', state.song.bpm); render(); }
       else if (act === 'bpm') {
         const sg = state.song; sg.bpm = Math.max(40, Math.min(160, sg.bpm + +a.dataset.d));
