@@ -169,5 +169,5 @@ svg .fn.fnb{fill:#eceff4;font-weight:700}
 .songhint .btn{padding:4px 10px;font-size:14px}
 .npcount{margin-left:10px;color:var(--M);font-weight:700;font-size:18px}
 /* song: dim the notes that are not used in the current bar */
-svg .dot.nat{opacity:.5}
-svg .dot.nat+.lbl{opacity:.5}
+svg .dot.nat{opacity:1;fill:var(--card);stroke:#555d69;stroke-width:2}
+svg .dot.nat+.lbl{opacity:1;fill:#7b8491;font-weight:500}
