@@ -478,7 +478,7 @@ const curPlan = () => {
   return songPlans.get(s.id);
 };
 state.song = {
-  id: store.get('song', SONGS[0].id), from: 0, to: Infinity, countIn: true, count: 0, countText: '', sel: 0, bpm: store.get('bpm', SONGS[0].bpm),
+  id: store.get('song', SONGS[0].id), from: 0, to: Infinity, countIn: true, follow: true, lastBar: -1, count: 0, countText: '', sel: 0, bpm: store.get('bpm', SONGS[0].bpm),
   click: true, notes: true, cover: false, revealed: new Set(),
   playing: false, pos: 0, beat: 0, timer: null, t: 0,
 };
@@ -535,6 +535,7 @@ function viewSong() {
     <label class="small"><input type="checkbox" data-song="notes" ${sg.notes ? 'checked' : ''}> 音符聲</label>
     <label class="small"><input type="checkbox" data-song="cover" ${sg.cover ? 'checked' : ''}> 遮住音名</label>
     <label class="small"><input type="checkbox" data-song="countIn" ${sg.countIn ? 'checked' : ''}> 起拍一小節</label>
+    <label class="small"><input type="checkbox" data-song="follow" ${sg.follow ? 'checked' : ''}> 自動滾動</label>
   </div>
   <div class="row songhint small">建議先用慢速（約 60 bpm）把指型和換弦練順，熟了再加到 ${song.bpm} bpm。
     <button class="btn" data-act="bpmset" data-v="60">慢速 60</button>
@@ -603,6 +604,15 @@ function songShow(bi) {
   if (c) c.textContent = state.song.countText;
 }
 
+// 自動滾動：讓正在彈的小節停在「固定面板下緣」到「畫面底部」之間的正中央
+function songCenter(el) {
+  const pan = document.querySelector('#nowpanel'), top = pan ? pan.getBoundingClientRect().bottom : 0;
+  const r = el.getBoundingClientRect(), delta = (r.top + r.height / 2) - (top + window.innerHeight) / 2;
+  if (Math.abs(delta) < 8) return;
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollBy({ top: delta, behavior: calm ? 'auto' : 'smooth' });
+}
+
 function songMark() {
   const sg = state.song;
   document.querySelectorAll('.bar.now, .bw.now').forEach(e => e.classList.remove('now'));
@@ -614,6 +624,8 @@ function songMark() {
   if (!el) return;
   el.classList.add('now');
   el.querySelector(`.bw[data-beat="${sg.beat}"]`)?.classList.add('now');
+  if (sg.follow && sg.lastBar !== bi) songCenter(el);
+  sg.lastBar = bi;
   songFocusBeat(sg.beat, Math.min(300, (60000 / sg.bpm) * 0.6));
 }
 
@@ -645,12 +657,12 @@ function songStart() {
   sg.playing = true; sg.pos = 0; sg.beat = 0; sg.t = performance.now();
   const list = songBars(), at = list.indexOf(sg.sel);
   if (at >= 0) sg.pos = at;
-  sg.count = sg.countIn ? 4 : 0; sg.countText = '';
+  sg.count = sg.countIn ? 4 : 0; sg.countText = ''; sg.lastBar = -1;
   songTick();
 }
 function songStop() {
   const sg = state.song;
-  sg.playing = false; clearTimeout(sg.timer); sg.timer = null; sg.count = 0; sg.countText = '';
+  sg.playing = false; clearTimeout(sg.timer); sg.timer = null; sg.count = 0; sg.countText = ''; sg.lastBar = -1;
   animClear(); songMark();
 }
 
