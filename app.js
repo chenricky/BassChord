@@ -565,9 +565,15 @@ function songPanelInner(bi) {
     pos.set(id, m);
   });
   const syms = bar.chords.map(c => `<span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join(' ');
-  const chips = bar.beats.map((b, k) => `<span class="npb ${BEAT_ROLE[b.role]}" data-beat="${k}"><small>${k + 1}</small>${fmtN(b.note)}${b.fin ? `<em>${FINGER[b.fin]}</em>` : ''}</span>`).join('');
+  // 音塊的高低依「絕對音高」排列：整首歌最低的音在最下面，最高的音在最上面
+  const semi = b => 12 * Math.log2(songBeatHz(b) / OPEN_HZ[0]);
+  const all = curPlan().flatMap(x => x.beats.map(semi)), lo = Math.min(...all), hi = Math.max(...all);
+  const chips = bar.beats.map((b, k) => {
+    const t = hi > lo ? (semi(b) - lo) / (hi - lo) : 0.5;
+    return `<span class="npb ${BEAT_ROLE[b.role]}" data-beat="${k}" style="left:${k * 25 + 0.5}%;top:calc(${(1 - t).toFixed(3)} * (100% - 56px))"><small>${k + 1}</small>${fmtN(b.note)}${b.fin ? `<em>${FINGER[b.fin]}</em>` : ''}</span>`;
+  }).join('');
   return `<div class="npboard">${boardSVG({ from: 1, to: FRET_MAX, ch: 36, cw: 54, left: 66, right: 32, strNums: true, fretStrong: [3, 5, 7], fretLabel: f => (f === 3 || f === 5 || f === 7 ? `${f} 格 ▸` : String(f)), marks: [...pos.values()], anim: true, aria: '前六格指板，這一小節的音位置' })}</div>
-    <div class="npinfo"><div class="npt">第 ${bar.n} 小節　${syms}<span class="npcount">${state.song.countText || ''}</span></div><div class="npbeats">${chips}</div></div>`;
+    <div class="npinfo"><div class="npt">第 ${bar.n} 小節　${syms}<span class="npcount">${state.song.countText || ''}</span></div><div class="npbeats pitch">${chips}</div><div class="small nphint">音塊越高，音越高</div></div>`;
 }
 function songFocusBeat(k, ms) {
   const pan = document.querySelector('#nowpanel'), svg = pan && pan.querySelector('svg.board');

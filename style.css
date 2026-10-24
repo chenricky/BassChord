@@ -171,3 +171,7 @@ svg .fn.fnb{fill:#eceff4;font-weight:700}
 /* song: dim the notes that are not used in the current bar */
 svg .dot.nat{opacity:1;fill:var(--card);stroke:#555d69;stroke-width:2}
 svg .dot.nat+.lbl{opacity:1;fill:#7b8491;font-weight:500}
+/* song: beat chips placed by absolute pitch (higher pitch = higher on screen) */
+.npbeats.pitch{display:block;position:relative;flex:1;min-height:130px}
+.npbeats.pitch .npb{position:absolute;width:24%;height:56px;padding:0;box-sizing:border-box;transition:transform .2s,box-shadow .2s}
+.nphint{text-align:center;font-size:12px}
