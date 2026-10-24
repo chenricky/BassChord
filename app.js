@@ -399,12 +399,12 @@ function planSong(song) {
   return bars;
 }
 
-// 只用空弦和前六格（第 0–6 格）：每個音名在指板上的可選位置
+// 只用前六格（第 1–6 格，不用空弦）：每個音名在指板上的可選位置
 const OPEN_PC = [4, 9, 2, 7]; // E A D G
 const FRET_MAX = 6;
 function noteSpots(note) {
   const pc = pcOfName(note), out = [];
-  OPEN_PC.forEach((o, s) => { const f = (pc - o + 12) % 12; if (f <= FRET_MAX) out.push({ s, f }); });
+  OPEN_PC.forEach((o, s) => { const f = (pc - o + 12) % 12; if (f >= 1 && f <= FRET_MAX) out.push({ s, f }); });
   return out;
 }
 // 整首歌一起找「手移動最少」的位置（換弦比換格費力，所以權重較高）
@@ -498,9 +498,9 @@ function songBeatHz(b) { return fretHz(b.s, b.f); }
 // 目前小節的指板：四拍的位置各標上拍數，播放時光圈在音與音之間滑動
 function songPanelInner(bi) {
   const bar = curPlan()[bi], key = buildKey(curSong().key), pos = new Map();
-  // 底圖：空弦與前六格上的調內音（只標音名），像標準的貝斯指板音名圖
+  // 底圖：前六格上的調內音（只標音名），像標準的貝斯指板音名圖
   STRINGS.forEach((n, s) => {
-    for (let f = 0; f <= FRET_MAX; f++) {
+    for (let f = 1; f <= FRET_MAX; f++) {
       const idx = key.pcs.indexOf((OPEN_PC[s] + f) % 12);
       if (idx >= 0) pos.set(`${s}:${f}`, { s, f, cls: 'nat', label: fmtN(key.scale[idx]), beats: [] });
     }
@@ -514,7 +514,7 @@ function songPanelInner(bi) {
   });
   const syms = bar.chords.map(c => `<span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join(' ');
   const chips = bar.beats.map((b, k) => `<span class="npb ${BEAT_ROLE[b.role]}" data-beat="${k}"><small>${k + 1}</small>${fmtN(b.note)}</span>`).join('');
-  return `<div class="npboard">${boardSVG({ from: 0, to: FRET_MAX, ch: 40, cw: 54, left: 66, strNums: true, fretStrong: [3, 5], fretLabel: f => (f === 0 ? '' : f === 3 || f === 5 ? `${f} 格 ▸` : String(f)), marks: [...pos.values()], anim: true, aria: '空弦與前六格指板，這一小節的音位置' })}</div>
+  return `<div class="npboard">${boardSVG({ from: 1, to: FRET_MAX, ch: 44, cw: 54, left: 66, strNums: true, fretStrong: [3, 5], fretLabel: f => (f === 3 || f === 5 ? `${f} 格 ▸` : String(f)), marks: [...pos.values()], anim: true, aria: '前六格指板，這一小節的音位置' })}</div>
     <div class="npinfo"><div class="npt">第 ${bar.n} 小節　${syms}</div><div class="npbeats">${chips}</div></div>`;
 }
 function songFocusBeat(k, ms) {
