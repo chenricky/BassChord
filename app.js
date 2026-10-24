@@ -381,39 +381,61 @@ function parseChord(raw) {
 function planSong(song) {
   const key = buildKey(song.key);
   const bars = song.sections.flatMap(s => s.bars.map(b => ({ sec: s.name, chords: b.map(parseChord) })));
-  const beatOf = (c, role, i) => ({ note: c.notes[i], role });
+  bars.forEach((bar, n) => { bar.n = n + 1; });
+  assignShapes(bars);
+  const beatOf = (c, role) => {
+    const pt = c.pos.pts.find(p => p.role === role), i = role === 'R' ? 0 : role === '3' ? 1 : 2;
+    return { note: c.notes[i], role, s: pt.s, f: pt.f, fin: pt.fin };
+  };
   bars.forEach((bar, n) => {
     const next = bars[(n + 1) % bars.length].chords[0], [c0, c1] = bar.chords;
     if (c1) {
-      bar.beats = [beatOf(c0, 'R', 0), beatOf(c0, '3', 1), beatOf(c1, 'R', 0), beatOf(c1, '3', 1)];
-    } else {
-      const idx = key.pcs.indexOf(next.pc);
-      const prevPc = idx >= 0 ? key.pcs[(idx + 6) % 7] : (next.pc + 11) % 12;
-      const name = idx >= 0 ? key.scale[(idx + 6) % 7] : spellTone(next.root, 6, (prevPc - next.pc + 12) % 12);
-      bar.beats = [beatOf(c0, 'R', 0), beatOf(c0, '3', 1), beatOf(c0, '5', 2),
-        { note: name, role: '→' }];
+      bar.beats = [beatOf(c0, 'R'), beatOf(c0, '3'), beatOf(c1, 'R'), beatOf(c1, '3')];
+      return;
     }
-    bar.n = n + 1;
+    // 第 4 拍：下一小節根音的前一個調內音，選離上一個音和下一個根音最近的位置
+    const idx = key.pcs.indexOf(next.pc);
+    const prevPc = idx >= 0 ? key.pcs[(idx + 6) % 7] : (next.pc + 11) % 12;
+    const name = idx >= 0 ? key.scale[(idx + 6) % 7] : spellTone(next.root, 6, (prevPc - next.pc + 12) % 12);
+    const nr = next.pos.pts.find(p => p.role === 'R'), last = c0.pos.pts.find(p => p.role === '5');
+    const dist = (a, b) => Math.abs(a.f - b.f) + 1.5 * Math.abs(a.s - b.s);
+    let best = null;
+    OPEN_PC.forEach((o, s2) => {
+      const f = (prevPc - o + 12) % 12;
+      if (f < 1 || f > FRET_MAX) return;
+      const cost = dist({ s: s2, f }, nr) + 0.5 * dist({ s: s2, f }, last);
+      if (!best || cost < best.cost) best = { s: s2, f, cost };
+    });
+    bar.beats = [beatOf(c0, 'R'), beatOf(c0, '3'), beatOf(c0, '5'), { note: name, role: '→', s: best.s, f: best.f }];
   });
-  assignSpots(bars);
   return bars;
 }
 
-// 只用前六格（第 1–6 格，不用空弦）：每個音名在指板上的可選位置
+// 三和弦頁教的指型（大 / 小 / 減），根音在最低的那條弦，三音、五音在上一條弦。
+// 只用第 1–8 格、不用空弦：每個和弦找出所有放得下的位置，整首歌一起挑「手移動最少」的組合。
 const OPEN_PC = [4, 9, 2, 7]; // E A D G
-const FRET_MAX = 6;
-function noteSpots(note) {
-  const pc = pcOfName(note), out = [];
-  OPEN_PC.forEach((o, s) => { const f = (pc - o + 12) % 12; if (f >= 1 && f <= FRET_MAX) out.push({ s, f }); });
+const FRET_MAX = 8;
+function chordSpots(c) {
+  const out = [];
+  for (let s = 0; s <= 2; s++) {
+    for (let n = 1; n <= FRET_MAX; n++) {
+      if ((OPEN_PC[s] + n) % 12 !== c.pc) continue;
+      SHAPES[c.q].forEach((sh, v) => {
+        const pts = sh.pts.map(p => ({ r: p.r, role: p.r === 'R' ? 'R' : p.r.endsWith('3') ? '3' : '5', s: s + p.s - 1, f: n + p.d, fin: p.f }));
+        if (pts.every(p => p.s <= 3 && p.f >= 1 && p.f <= FRET_MAX)) {
+          out.push({ s, n, v, name: sh.name, pts, mean: pts.reduce((a, p) => a + p.f, 0) / pts.length });
+        }
+      });
+    }
+  }
   return out;
 }
-// 整首歌一起找「手移動最少」的位置（換弦比換格費力，所以權重較高）
-function assignSpots(bars) {
-  const seq = bars.flatMap(b => b.beats), cands = seq.map(b => noteSpots(b.note));
-  const cost = (a, b) => Math.abs(a.f - b.f) + 1.5 * Math.abs(a.s - b.s);
+function assignShapes(bars) {
+  const chords = bars.flatMap(b => b.chords), cands = chords.map(chordSpots);
+  const cost = (a, b) => Math.abs(a.mean - b.mean) + 0.5 * Math.abs(a.s - b.s) + (b.v ? 0.2 : 0) + (b.s !== 1 ? 0.3 : 0);
   let prev = cands[0].map(c => ({ c, tot: 0, from: -1 }));
   const table = [prev];
-  for (let i = 1; i < seq.length; i++) {
+  for (let i = 1; i < chords.length; i++) {
     prev = cands[i].map(c => {
       let best = null;
       table[i - 1].forEach((p, j) => { const t = p.tot + cost(p.c, c); if (!best || t < best.tot) best = { c, tot: t, from: j }; });
@@ -422,8 +444,8 @@ function assignSpots(bars) {
     table.push(prev);
   }
   let j = prev.reduce((bi, p, i, a) => (p.tot < a[bi].tot ? i : bi), 0);
-  for (let i = seq.length - 1; i >= 0; i--) {
-    const e = table[i][j]; seq[i].s = e.c.s; seq[i].f = e.c.f; j = e.from;
+  for (let i = chords.length - 1; i >= 0; i--) {
+    const e = table[i][j]; chords[i].pos = e.c; j = e.from;
   }
 }
 
@@ -485,12 +507,18 @@ const bpmNow = () => state.song.bpm;
 
 function songDetail(bar) {
   const rules = bar.chords.map(c => `${c.rule}：<b>${c.notes.map(fmtN).join(' ')}</b>`).join('<br>');
-  const seq = bar.beats.map((b, i) => `<span class="small">${i + 1} 拍</span> ${noteLabel(b, false)} <span class="small">${STRINGS[b.s]} 弦 ${b.f ? b.f + ' 格' : '空弦'}</span>`).join('<br>');
+  const seq = bar.beats.map((b, i) => `<span class="small">${i + 1} 拍</span> ${noteLabel(b, false)} <span class="small">${STRINGS[b.s]} 弦 ${b.f} 格${b.fin ? '　' + FINGER[b.fin] + '指' : ''}</span>`).join('<br>');
+  const shapes = bar.chords.map(c => {
+    const fr = c.pos.pts.map(p => p.f), from = Math.max(1, Math.min(...fr) - 1), to = Math.max(Math.max(...fr) + 1, from + 4);
+    const marks = c.pos.pts.map(p => ({ s: p.s, f: p.f, cls: ptCls(p.r), label: p.r, fin: p.fin }));
+    return `<div class="shape"><h4>${fmtN(c.sym)} · ${Q[c.q].full}（${STRINGS[c.pos.s]} 弦根音）</h4>${boardSVG({ from, to, marks, width: 190, aria: '和弦指型' })}</div>`;
+  }).join('');
   return `<div class="card">
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">第 ${bar.n} 小節（${bar.sec} 段）</h2>
       <button class="btn" data-act="songbarplay">▶ 試聽這小節</button></div>
     <p class="small">${rules}</p>
     <p class="beatseq" style="line-height:2">${seq}</p>
+    <div class="shapes">${shapes}</div>
   </div>`;
 }
 
@@ -513,8 +541,8 @@ function songPanelInner(bi) {
     pos.set(id, m);
   });
   const syms = bar.chords.map(c => `<span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join(' ');
-  const chips = bar.beats.map((b, k) => `<span class="npb ${BEAT_ROLE[b.role]}" data-beat="${k}"><small>${k + 1}</small>${fmtN(b.note)}</span>`).join('');
-  return `<div class="npboard">${boardSVG({ from: 1, to: FRET_MAX, ch: 44, cw: 54, left: 66, strNums: true, fretStrong: [3, 5], fretLabel: f => (f === 3 || f === 5 ? `${f} 格 ▸` : String(f)), marks: [...pos.values()], anim: true, aria: '前六格指板，這一小節的音位置' })}</div>
+  const chips = bar.beats.map((b, k) => `<span class="npb ${BEAT_ROLE[b.role]}" data-beat="${k}"><small>${k + 1}</small>${fmtN(b.note)}${b.fin ? `<em>${FINGER[b.fin]}</em>` : ''}</span>`).join('');
+  return `<div class="npboard">${boardSVG({ from: 1, to: FRET_MAX, ch: 36, cw: 54, left: 66, strNums: true, fretStrong: [3, 5, 7], fretLabel: f => (f === 3 || f === 5 || f === 7 ? `${f} 格 ▸` : String(f)), marks: [...pos.values()], anim: true, aria: '前六格指板，這一小節的音位置' })}</div>
     <div class="npinfo"><div class="npt">第 ${bar.n} 小節　${syms}</div><div class="npbeats">${chips}</div></div>`;
 }
 function songFocusBeat(k, ms) {
