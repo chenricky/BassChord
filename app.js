@@ -99,16 +99,36 @@ let K = buildKey(state.key);
 
 /* ================= 聲音 ================= */
 let ac;
+function audio() {
+  ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+  if (ac.state !== 'running') ac.resume();   // iOS 的音訊預設休眠，每次播放前先喚醒
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* 不支援就略過 */ }
+  return ac;
+}
+// 貝斯音：基音加上 2、3 倍泛音，手機小喇叭放不出低頻時也聽得到音高
 function tone(freq, at = 0, dur = 0.9, vol = 0.22) {
   try {
-    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-    const t = ac.currentTime + at, o = ac.createOscillator(), g = ac.createGain();
-    o.type = 'triangle'; o.frequency.value = freq;
+    const c = audio(), t = c.currentTime + at, g = c.createGain();
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(ac.destination);
-    o.start(t); o.stop(t + dur + 0.05);
+    g.connect(c.destination);
+    [[1, 'triangle', 0.57], [2, 'sine', 0.29], [3, 'sine', 0.14]].forEach(([m, type, w]) => {
+      const o = c.createOscillator(), og = c.createGain();
+      o.type = type; o.frequency.value = freq * m; og.gain.value = w;
+      o.connect(og).connect(g); o.start(t); o.stop(t + dur + 0.05);
+    });
+  } catch { /* 無音訊支援 */ }
+}
+// 節拍聲：很短、很輕的「嗒」，避免蓋過貝斯音
+function click(accent, vol = 0.05) {
+  try {
+    const c = audio(), t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.value = accent ? 1200 : 800;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.06);
   } catch { /* 無音訊支援 */ }
 }
 const fretHz = (s, f) => OPEN_HZ[s] * 2 ** (f / 12);
@@ -597,7 +617,7 @@ function songTick() {
   if (sg.pos >= list.length) sg.pos = 0;
   if (sg.count > 0) { // 起拍：只打節拍，不移動小節
     const k = 4 - sg.count;
-    tone(k === 0 ? 1500 : 1000, 0, 0.05, 0.14);
+    click(k === 0, 0.07);
     sg.countText = `預備 ${k + 1}`;
     songShow(list[sg.pos]);
     sg.count--;
@@ -605,7 +625,7 @@ function songTick() {
   } else {
     if (sg.countText) { sg.countText = ''; songShow(list[sg.pos]); }
     const bar = curPlan()[list[sg.pos]], b = bar.beats[sg.beat];
-    if (sg.click) tone(sg.beat === 0 ? 1500 : 1000, 0, 0.05, 0.1);
+    if (sg.click) click(sg.beat === 0);
     if (sg.notes) tone(songBeatHz(b), 0, (60 / sg.bpm) * 0.9, 0.3);
     songMark();
     sg.beat++;
