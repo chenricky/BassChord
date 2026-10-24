@@ -14,3 +14,6 @@
 ```
 python3 -m http.server 8000   # 然後開啟 http://localhost:8000
 ```
+
+## 部署
+由 Vercel 從 `main` 分支自動部署（純靜態，無需建置）。
