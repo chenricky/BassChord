@@ -348,10 +348,51 @@ function viewBoard() {
 }
 
 /* ================= 畫面：筆記 ================= */
+/* ================= 原始筆記（密碼保護） ================= */
+// 注意：這是純前端的簡易門鎖，只擋住一般使用者，不是真正的加密。
+const DEFAULT_PW_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // 預設密碼 1234 的 SHA-256
+const pwStore = {
+  hash: () => { try { return localStorage.getItem('basschord.pwhash') || DEFAULT_PW_HASH; } catch { return DEFAULT_PW_HASH; } },
+  save: h => { try { localStorage.setItem('basschord.pwhash', h); } catch { /* ignore */ } },
+  unlocked: () => { try { return sessionStorage.getItem('basschord.unlocked') === '1'; } catch { return state.notesOpen === true; } },
+  setUnlocked: v => { state.notesOpen = v; try { v ? sessionStorage.setItem('basschord.unlocked', '1') : sessionStorage.removeItem('basschord.unlocked'); } catch { /* ignore */ } },
+};
+async function sha256(text) {
+  if (window.crypto && crypto.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  let h = 5381; for (const c of text) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; // 沒有 crypto 時的備用雜湊
+  return 'x' + h.toString(16);
+}
+async function checkPw(text) {
+  const h = await sha256(text), saved = pwStore.hash();
+  if (h === saved) return true;
+  // 預設密碼在不支援 crypto 的環境下用備用雜湊比對
+  return saved === DEFAULT_PW_HASH && !(window.crypto && crypto.subtle) && text === '1234';
+}
+
 function viewNotes() {
+  if (!pwStore.unlocked()) {
+    return `<h2>原始筆記</h2><p class="sub">這一頁需要密碼。</p>
+    <form class="card pwform" id="pwform" autocomplete="off">
+      <label for="notepw">密碼</label>
+      <div class="row"><input id="notepw" type="password" inputmode="text" autocomplete="off" aria-label="密碼">
+      <button class="btn primary" type="submit">解鎖</button></div>
+      <p class="pwmsg" id="pwmsg" role="alert">${state.pwError ? '密碼不對，請再試一次。' : ''}</p>
+    </form>`;
+  }
   const caps = ['音高：音名 / 簡譜 / 唱名', '三和弦：順階和弦與口訣', '三和弦練習（一）：A 弦上找出音階與和弦', '指型：大小三和弦的指法', '歌曲：Fly Me To The Moon（和弦簡化標注）'];
-  return `<h2>原始筆記</h2><p class="sub">App 內容整理自這 5 頁筆記。</p>
-  <div class="gallery">${caps.map((c, i) => `<figure><img src="assets/note-${i + 1}.${i === 4 ? 'webp' : 'jpg'}" alt="${c}" loading="lazy"><figcaption>${c}</figcaption></figure>`).join('')}</div>`;
+  return `<div class="row" style="justify-content:space-between"><h2 style="margin:0">原始筆記</h2><button class="btn" data-act="lock">鎖上</button></div>
+  <p class="sub">App 內容整理自這 5 頁筆記。</p>
+  <div class="gallery">${caps.map((c, i) => `<figure><img src="assets/note-${i + 1}.${i === 4 ? 'webp' : 'jpg'}" alt="${c}" loading="lazy"><figcaption>${c}</figcaption></figure>`).join('')}</div>
+  <h3>更改密碼</h3>
+  <form class="card pwform" id="pwchange" autocomplete="off">
+    <label for="newpw">新密碼</label>
+    <div class="row"><input id="newpw" type="password" autocomplete="off" aria-label="新密碼">
+    <button class="btn" type="submit">儲存</button></div>
+    <p class="pwmsg" id="pwchangemsg" role="status">${state.pwSaved ? '密碼已更新。' : ''}</p>
+  </form>`;
 }
 
 /* ================= 歌曲練習 ================= */
@@ -873,7 +914,8 @@ function init() {
       else if (act === 'bpm') {
         const sg = state.song; sg.bpm = Math.max(40, Math.min(160, sg.bpm + +a.dataset.d));
         store.set('bpm', sg.bpm); render();
-      } else if (act === 'ans') answer(a.dataset.v);
+      } else if (act === 'lock') { pwStore.setUnlocked(false); state.pwError = false; render(); }
+      else if (act === 'ans') answer(a.dataset.v);
       else if (act === 'tap') {
         const f = +a.dataset.fret;
         if (state.q && !state.q.answered) {
@@ -897,6 +939,19 @@ function init() {
     }
     const tr = e.target.closest('.tri tbody tr');
     if (tr) { state.deg = +tr.dataset.i; render(); }
+  });
+
+  $('#view').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (e.target.id === 'pwform') {
+      const ok = await checkPw($('#notepw').value);
+      state.pwError = !ok; pwStore.setUnlocked(ok); render();
+      if (!ok) { const el = $('#notepw'); if (el) el.focus(); }
+    } else if (e.target.id === 'pwchange') {
+      const v = $('#newpw').value;
+      if (!v) { $('#pwchangemsg').textContent = '請先輸入新密碼。'; return; }
+      pwStore.save(await sha256(v)); state.pwSaved = true; render(); state.pwSaved = false;
+    }
   });
 
   $('#view').addEventListener('change', e => {

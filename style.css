@@ -182,3 +182,8 @@ svg .dot.nat+.lbl{opacity:1;fill:#7b8491;font-weight:500}
 .bar.now .bn{align-self:flex-start;background:#5ee6a0;color:#0e2a1e;border-radius:6px;padding:0 8px;font-size:12px;font-weight:700}
 .bar.now .bw.now{background:rgba(255,255,255,.3);box-shadow:0 0 0 2px #fff}
 @media (prefers-reduced-motion:reduce){.bar,.bar.now{transition:none}.bar.now{transform:none}}
+/* notes password gate */
+.pwform label{display:block;margin-bottom:6px;color:var(--dim);font-size:14px}
+.pwform input{flex:1;min-width:0;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px}
+.pwmsg{min-height:1.4em;margin:8px 0 0;color:var(--d);font-size:14px}
+#pwchangemsg{color:var(--ok)}
