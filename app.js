@@ -458,25 +458,36 @@ const curPlan = () => {
   return songPlans.get(s.id);
 };
 state.song = {
-  id: store.get('song', SONGS[0].id), sec: 'all', sel: 0, bpm: store.get('bpm', SONGS[0].bpm),
+  id: store.get('song', SONGS[0].id), from: 0, to: Infinity, countIn: true, count: 0, countText: '', sel: 0, bpm: store.get('bpm', SONGS[0].bpm),
   click: true, notes: true, cover: false, revealed: new Set(),
   playing: false, pos: 0, beat: 0, timer: null, t: 0,
 };
-const songBars = () => curPlan().map((b, i) => i).filter(i => state.song.sec === 'all' || curPlan()[i].sec === state.song.sec);
+const songHi = () => Math.min(state.song.to, curPlan().length - 1);
+const songBars = () => curPlan().map((b, i) => i).filter(i => i >= state.song.from && i <= songHi());
+const secRange = name => {
+  const idx = curPlan().map((b, i) => i).filter(i => name === 'all' || curPlan()[i].sec === name);
+  return [idx[0], idx[idx.length - 1]];
+};
+function setSongRange(from, to) {
+  const sg = state.song, n = curPlan().length;
+  sg.from = Math.max(0, Math.min(from, n - 1)); sg.to = Math.max(sg.from, Math.min(to, n - 1));
+  sg.pos = 0; sg.beat = 0; sg.count = 0; sg.countText = '';
+}
 const noteLabel = (b, covered) => `<i class="bc ${BEAT_ROLE[b.role]}"><span class="${covered ? 'covered' : ''}">${fmtN(b.note)}</span></i>`;
 
 function viewSong() {
   const sg = state.song, song = curSong(), plan = curPlan();
   const secs = ['all', ...song.sections.map(s => s.name)];
-  const chips = secs.map(s => `<button class="chip ${sg.sec === s ? 'on' : ''}" data-act="songsec" data-sec="${s}">${s === 'all' ? '全曲' : s + ' 段'}</button>`).join('');
+  const hi = songHi();
+  const chips = secs.map(s => { const r = secRange(s); return `<button class="chip ${sg.from === r[0] && hi === r[1] ? 'on' : ''}" data-act="songsec" data-sec="${s}">${s === 'all' ? '全曲' : s + ' 段'}</button>`; }).join('');
+  const opts = v => plan.map((b, i) => `<option value="${i}" ${i === v ? 'selected' : ''}>${b.n}</option>`).join('');
   let grid = '', lastSec = '';
   plan.forEach((bar, i) => {
-    if (sg.sec !== 'all' && bar.sec !== sg.sec) return;
     if (bar.sec !== lastSec) { grid += `<div class="secname">${bar.sec} 段</div>`; lastSec = bar.sec; }
     const hide = sg.cover && !sg.revealed.has(i);
     const syms = bar.chords.map(c => `<span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join('');
     const quals = bar.chords.map(c => `<span class="${Q[c.q].cls}">${Q[c.q].zh}</span>`).join('<span class="small"> / </span>');
-    grid += `<button class="bar ${i === sg.sel ? 'sel' : ''}" data-act="songbar" data-bar="${i}">
+    grid += `<button class="bar ${i === sg.sel ? 'sel' : ''} ${i < sg.from || i > hi ? 'out' : ''}" data-act="songbar" data-bar="${i}">
       <span class="bn">${bar.n}</span><span class="syms">${syms}</span>
       <span class="ql ${hide ? 'covered' : ''}">${quals}</span>
       <span class="beats">${bar.beats.map((b, k) => `<span class="bw" data-beat="${k}">${noteLabel(b, hide)}</span>`).join('')}</span>
@@ -491,6 +502,10 @@ function viewSong() {
     兩個和弦的小節：每個和弦只彈 <i class="bc r">根音</i><i class="bc t">三音</i>。<br>手指跟「三和弦」頁一樣：食＝食指、中＝中指、無＝無名指、小＝小指。 <span class="hlc cs">黃色</span> 為筆記標出的對比和弦。
   </div>
   <div class="chips">${chips}</div>
+  <div class="row looprange small">循環範圍：第
+    <select id="loopfrom" data-range="from" aria-label="循環起點小節">${opts(sg.from)}</select> 到第
+    <select id="loopto" data-range="to" aria-label="循環終點小節">${opts(hi)}</select> 小節
+  </div>
   <div class="row songctl">
     <button class="btn primary" data-act="songplay">${sg.playing ? '■ 停止' : '▶ 跟拍練習'}</button>
     <button class="btn" data-act="bpm" data-d="-5" aria-label="慢一點">−</button>
@@ -499,6 +514,11 @@ function viewSong() {
     <label class="small"><input type="checkbox" data-song="click" ${sg.click ? 'checked' : ''}> 節拍聲</label>
     <label class="small"><input type="checkbox" data-song="notes" ${sg.notes ? 'checked' : ''}> 音符聲</label>
     <label class="small"><input type="checkbox" data-song="cover" ${sg.cover ? 'checked' : ''}> 遮住音名</label>
+    <label class="small"><input type="checkbox" data-song="countIn" ${sg.countIn ? 'checked' : ''}> 起拍一小節</label>
+  </div>
+  <div class="row songhint small">建議先用慢速（約 60 bpm）把指型和換弦練順，熟了再加到 ${song.bpm} bpm。
+    <button class="btn" data-act="bpmset" data-v="60">慢速 60</button>
+    <button class="btn" data-act="bpmset" data-v="${song.bpm}">原速 ${song.bpm}</button>
   </div>
   <div class="nowpanel" id="nowpanel" data-bar="${sg.sel}">${songPanelInner(sg.sel)}</div>
   <div class="barsgrid">${grid}</div>
@@ -519,6 +539,7 @@ function songDetail(bar) {
   return `<div class="card">
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">第 ${bar.n} 小節（${bar.sec} 段）</h2>
       <button class="btn" data-act="songbarplay">▶ 試聽這小節</button></div>
+    <div class="row" style="margin:8px 0"><button class="btn" data-act="songfrom">從這小節開始循環</button><button class="btn" data-act="songto">循環到這小節</button></div>
     <p class="small">${rules}</p>
     <p class="beatseq" style="line-height:2">${seq}</p>
     <div class="shapes">${shapes}</div>
@@ -547,7 +568,7 @@ function songPanelInner(bi) {
   const syms = bar.chords.map(c => `<span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join(' ');
   const chips = bar.beats.map((b, k) => `<span class="npb ${BEAT_ROLE[b.role]}" data-beat="${k}"><small>${k + 1}</small>${fmtN(b.note)}${b.fin ? `<em>${FINGER[b.fin]}</em>` : ''}</span>`).join('');
   return `<div class="npboard">${boardSVG({ from: 1, to: FRET_MAX, ch: 36, cw: 54, left: 66, right: 32, strNums: true, fretStrong: [3, 5, 7], fretLabel: f => (f === 3 || f === 5 || f === 7 ? `${f} 格 ▸` : String(f)), marks: [...pos.values()], anim: true, aria: '前六格指板，這一小節的音位置' })}</div>
-    <div class="npinfo"><div class="npt">第 ${bar.n} 小節　${syms}</div><div class="npbeats">${chips}</div></div>`;
+    <div class="npinfo"><div class="npt">第 ${bar.n} 小節　${syms}<span class="npcount">${state.song.countText || ''}</span></div><div class="npbeats">${chips}</div></div>`;
 }
 function songFocusBeat(k, ms) {
   const pan = document.querySelector('#nowpanel'), svg = pan && pan.querySelector('svg.board');
@@ -568,13 +589,22 @@ function songBarPlay(bar, bpm = state.song.bpm) {
   later(animClear, 4 * dt * 1000 + 500);
 }
 
+// 讓「正在彈」面板顯示某一小節（不移動光圈），並更新起拍文字
+function songShow(bi) {
+  const pan = document.querySelector('#nowpanel');
+  if (!pan) return;
+  if (+pan.dataset.bar !== bi) { pan.dataset.bar = bi; pan.innerHTML = songPanelInner(bi); }
+  const c = pan.querySelector('.npcount');
+  if (c) c.textContent = state.song.countText;
+}
+
 function songMark() {
   const sg = state.song;
   document.querySelectorAll('.bar.now, .bw.now').forEach(e => e.classList.remove('now'));
   if (state.tab !== 'song') return;
-  const pan = document.querySelector('#nowpanel'), bi = sg.playing ? songBars()[sg.pos] : sg.sel;
-  if (pan && +pan.dataset.bar !== bi) { pan.dataset.bar = bi; pan.innerHTML = songPanelInner(bi); }
-  if (!sg.playing) return;
+  const bi = sg.playing ? songBars()[sg.pos] : sg.sel;
+  songShow(bi);
+  if (!sg.playing || sg.count > 0) return;
   const el = document.querySelector(`.bar[data-bar="${bi}"]`);
   if (!el) return;
   el.classList.add('now');
@@ -586,12 +616,22 @@ function songTick() {
   const sg = state.song, list = songBars();
   if (!sg.playing || !list.length) return;
   if (sg.pos >= list.length) sg.pos = 0;
-  const bar = curPlan()[list[sg.pos]], b = bar.beats[sg.beat];
-  if (sg.click) tone(sg.beat === 0 ? 1500 : 1000, 0, 0.05, 0.1);
-  if (sg.notes) tone(songBeatHz(b), 0, (60 / sg.bpm) * 0.9, 0.3);
-  songMark();
-  sg.beat++;
-  if (sg.beat >= 4) { sg.beat = 0; sg.pos = (sg.pos + 1) % list.length; }
+  if (sg.count > 0) { // 起拍：只打節拍，不移動小節
+    const k = 4 - sg.count;
+    tone(k === 0 ? 1500 : 1000, 0, 0.05, 0.14);
+    sg.countText = `預備 ${k + 1}`;
+    songShow(list[sg.pos]);
+    sg.count--;
+    if (sg.count === 0) sg.beat = 0;
+  } else {
+    if (sg.countText) { sg.countText = ''; songShow(list[sg.pos]); }
+    const bar = curPlan()[list[sg.pos]], b = bar.beats[sg.beat];
+    if (sg.click) tone(sg.beat === 0 ? 1500 : 1000, 0, 0.05, 0.1);
+    if (sg.notes) tone(songBeatHz(b), 0, (60 / sg.bpm) * 0.9, 0.3);
+    songMark();
+    sg.beat++;
+    if (sg.beat >= 4) { sg.beat = 0; sg.pos = (sg.pos + 1) % list.length; }
+  }
   sg.t += 60000 / sg.bpm;
   sg.timer = setTimeout(songTick, Math.max(0, sg.t - performance.now()));
 }
@@ -600,11 +640,13 @@ function songStart() {
   sg.playing = true; sg.pos = 0; sg.beat = 0; sg.t = performance.now();
   const list = songBars(), at = list.indexOf(sg.sel);
   if (at >= 0) sg.pos = at;
+  sg.count = sg.countIn ? 4 : 0; sg.countText = '';
   songTick();
 }
 function songStop() {
   const sg = state.song;
-  sg.playing = false; clearTimeout(sg.timer); sg.timer = null; animClear(); songMark();
+  sg.playing = false; clearTimeout(sg.timer); sg.timer = null; sg.count = 0; sg.countText = '';
+  animClear(); songMark();
 }
 
 /* ================= 測驗 ================= */
@@ -799,8 +841,9 @@ function init() {
         if (state.qtypes.has(t) && state.qtypes.size > 1) state.qtypes.delete(t); else state.qtypes.add(t);
         store.set('qtypes', [...state.qtypes]); state.q = null; render();
       } else if (act === 'songsec') {
-        const sg = state.song; sg.sec = a.dataset.sec; sg.pos = 0; sg.beat = 0;
-        const list = songBars(); if (!list.includes(sg.sel)) sg.sel = list[0];
+        const sg = state.song, r = secRange(a.dataset.sec);
+        setSongRange(r[0], r[1]);
+        if (!songBars().includes(sg.sel)) sg.sel = r[0];
         render();
       } else if (act === 'songbar') {
         const sg = state.song, i = +a.dataset.bar;
@@ -810,6 +853,9 @@ function init() {
         if (!sg.playing) songBarPlay(curPlan()[i]); // 點小節就彈這一小節，並在指板上依序亮起
       } else if (act === 'songplay') { if (state.song.playing) songStop(); else songStart(); render(); }
       else if (act === 'songbarplay') songBarPlay(curPlan()[state.song.sel]);
+      else if (act === 'songfrom') { const sg = state.song; setSongRange(sg.sel, Math.max(sg.sel, songHi())); render(); }
+      else if (act === 'songto') { const sg = state.song; setSongRange(Math.min(sg.from, sg.sel), sg.sel); render(); }
+      else if (act === 'bpmset') { state.song.bpm = +a.dataset.v; store.set('bpm', state.song.bpm); render(); }
       else if (act === 'bpm') {
         const sg = state.song; sg.bpm = Math.max(40, Math.min(160, sg.bpm + +a.dataset.d));
         store.set('bpm', sg.bpm); render();
@@ -840,6 +886,12 @@ function init() {
   });
 
   $('#view').addEventListener('change', e => {
+    const rg = e.target.dataset.range;
+    if (rg) {
+      const sg = state.song, v = +e.target.value;
+      if (rg === 'from') setSongRange(v, Math.max(v, songHi())); else setSongRange(Math.min(sg.from, v), v);
+      render(); return;
+    }
     const sc = e.target.dataset.song;
     if (sc) { state.song[sc] = e.target.checked; if (sc === 'cover') state.song.revealed.clear(); render(); return; }
     const c = e.target.dataset.cover;

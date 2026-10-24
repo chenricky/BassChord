@@ -163,3 +163,8 @@ svg .fn.fnb{fill:#eceff4;font-weight:700}
 .npb em{right:4px;font-size:10px}
 @media (max-width:560px){.npb{padding:12px 0 14px;font-size:15px}.npbeats{gap:4px}}
 .cs{white-space:nowrap}
+.looprange{margin:8px 0}
+.bar.out{opacity:.4}
+.songhint{margin:8px 0;gap:8px}
+.songhint .btn{padding:4px 10px;font-size:14px}
+.npcount{margin-left:10px;color:var(--M);font-weight:700;font-size:18px}
