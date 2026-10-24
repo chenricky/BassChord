@@ -112,10 +112,68 @@ function tone(freq, at = 0, dur = 0.9, vol = 0.22) {
   } catch { /* 無音訊支援 */ }
 }
 const fretHz = (s, f) => OPEN_HZ[s] * 2 ** (f / 12);
+// 依音高由低到高排序（根音 → 三音 → 五音），回傳每個指型點的順序
+const pitchOrder = (d, pts) => {
+  const idx = pts.map((p, i) => i).sort((a, b) => fretHz(pts[a].s, d.fret + pts[a].d) - fretHz(pts[b].s, d.fret + pts[b].d));
+  return pts.map((p, i) => idx.indexOf(i));
+};
 function playChord(d) {
-  const sh = SHAPES[d.q][0].pts.map(p => fretHz(p.s, d.fret + p.d)).sort((a, b) => a - b);
-  sh.forEach((hz, i) => tone(hz, i * 0.4, 0.8));
-  sh.forEach(hz => tone(hz, 1.4, 1.4, 0.14));
+  const pts = SHAPES[d.q][0].pts;
+  pts.map(p => fretHz(p.s, d.fret + p.d)).sort((a, b) => a - b).forEach((hz, i) => {
+    tone(hz, i * 0.4, 0.8);
+    tone(hz, 1.4, 1.4, 0.14);
+  });
+}
+
+/* ================= 動畫：依序亮起每個音 ================= */
+const animTimers = [];
+function animClear() {
+  animTimers.forEach(clearTimeout); animTimers.length = 0;
+  document.querySelectorAll('svg.board .dot.hot').forEach(e => e.classList.remove('hot'));
+  document.querySelectorAll('svg.board .ring').forEach(r => { r.style.opacity = 0; });
+  document.querySelectorAll('svg.board .trail').forEach(t => t.remove());
+  document.querySelectorAll('.npb.now').forEach(e => e.classList.remove('now'));
+}
+const later = (fn, ms) => animTimers.push(setTimeout(fn, ms));
+// 把光圈滑到某個音，留下一條軌跡線，並讓該音放大發光
+function focusDot(svg, dot, prev, ms) {
+  svg.querySelectorAll('.dot.hot').forEach(e => e.classList.remove('hot'));
+  const x = +dot.getAttribute('cx'), y = +dot.getAttribute('cy'), ring = svg.querySelector('.ring');
+  if (ring) {
+    if (ring.style.opacity !== '1') {
+      ring.style.transition = 'none'; ring.style.transform = `translate(${x}px,${y}px)`;
+      void ring.getBoundingClientRect(); ring.style.opacity = 1;
+    }
+    ring.style.transition = `transform ${ms}ms cubic-bezier(.25,1.3,.5,1), opacity .2s`;
+    ring.style.transform = `translate(${x}px,${y}px)`;
+  }
+  if (prev && prev !== dot) {
+    const px = +prev.getAttribute('cx'), py = +prev.getAttribute('cy'), len = Math.hypot(x - px, y - py);
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ln.setAttribute('class', 'trail');
+    ln.setAttribute('x1', px); ln.setAttribute('y1', py); ln.setAttribute('x2', x); ln.setAttribute('y2', y);
+    ln.style.strokeDasharray = len; ln.style.strokeDashoffset = len;
+    svg.insertBefore(ln, svg.querySelector('.dot'));
+    void ln.getBoundingClientRect();
+    ln.style.transition = `stroke-dashoffset ${ms}ms ease-out`; ln.style.strokeDashoffset = 0;
+  }
+  void dot.getBoundingClientRect();
+  dot.classList.add('hot');
+}
+const chordDots = svg => [...svg.querySelectorAll('.dot[data-ord]')].sort((a, b) => a.dataset.ord - b.dataset.ord);
+// 和弦試聽：根音 → 三音 → 五音 依序亮起，最後三個音一起閃一下
+function animateChord(svg) {
+  const dots = chordDots(svg);
+  if (!dots.length) return;
+  animClear();
+  dots.forEach((d, i) => later(() => focusDot(svg, d, dots[i - 1], 300), i * 400));
+  later(() => {
+    svg.querySelectorAll('.trail').forEach(t => t.remove());
+    const ring = svg.querySelector('.ring'); if (ring) ring.style.opacity = 0;
+    svg.querySelectorAll('.dot.hot').forEach(e => e.classList.remove('hot'));
+    dots.forEach(d => { void d.getBoundingClientRect(); d.classList.add('hot'); });
+  }, 1400);
+  later(animClear, 2900);
 }
 
 /* ================= 指板 SVG ================= */
@@ -142,22 +200,25 @@ function boardSVG(o) {
   (o.marks || []).forEach(m => {
     if (m.f < o.from || m.f > o.to) return;
     const x = sx(m.s), y = ry(m.f) + ch / 2;
-    h += `<circle class="dot ${m.cls || ''}" cx="${x}" cy="${y}" r="${rad}"/>`;
+    h += `<circle class="dot ${m.cls || ''}" cx="${x}" cy="${y}" r="${rad}"${m.ord !== undefined ? ` data-ord="${m.ord}"` : ''}${m.beats ? ` data-b="${m.beats.join(' ')}"` : ''}/>`;
     if (m.label) h += `<text class="lbl" x="${x}" y="${y + 4}">${m.label}</text>`;
     if (m.fin) h += `<text class="fin" x="${x + rad + 3}" y="${y + 4}">${FINGER[m.fin]}</text>`;
+    if (m.tag) h += `<text class="fin tagn" x="${x + rad + 3}" y="${y + 4}">${m.tag}</text>`;
   });
+  if (o.anim) h += `<circle class="ring" cx="0" cy="0" r="${rad + 6}"/>`;
   return h + '</svg>';
 }
 
 function shapeMarks(d, sh, opts = {}) {
-  return sh.pts.map(p => ({
-    s: p.s, f: d.fret + p.d, cls: ptCls(p.r),
+  const ord = pitchOrder(d, sh.pts);
+  return sh.pts.map((p, i) => ({
+    s: p.s, f: d.fret + p.d, cls: ptCls(p.r), ord: ord[i],
     label: opts.hideLabels ? (p.r === 'R' ? '◎' : '') : p.r,
     fin: opts.hideFin ? 0 : p.f,
   }));
 }
 const shapeSVG = (d, sh, opts) => boardSVG({
-  from: d.fret - 2, to: d.fret + 3, marks: shapeMarks(d, sh, opts), width: 190, aria: '和弦指型',
+  from: d.fret - 2, to: d.fret + 3, marks: shapeMarks(d, sh, opts), width: 190, aria: '和弦指型', anim: true,
 });
 
 /* ================= 畫面：音高 ================= */
@@ -241,8 +302,9 @@ function viewBoard() {
     const pc = (9 + f) % 12, idx = K.pcs.indexOf(pc);
     if (idx >= 0) map.set(`1:${f}`, { s: 1, f, cls: 'scale', label: fmtN(K.scale[idx]) });
   }
-  SHAPES[d.q][0].pts.forEach(p => {
-    map.set(`${p.s}:${d.fret + p.d}`, { s: p.s, f: d.fret + p.d, cls: ptCls(p.r), label: p.r });
+  const ord = pitchOrder(d, SHAPES[d.q][0].pts);
+  SHAPES[d.q][0].pts.forEach((p, i) => {
+    map.set(`${p.s}:${d.fret + p.d}`, { s: p.s, f: d.fret + p.d, cls: ptCls(p.r), label: p.r, ord: ord[i] });
   });
   const chips = K.degrees.map(x => `<button class="chip ${x.i === state.deg ? 'on' : ''}" data-act="deg" data-i="${x.i}">${x.roman}</button>`).join('');
   return `
@@ -255,7 +317,7 @@ function viewBoard() {
       <button class="btn" data-act="play">▶ 試聽</button>
     </div>
     <div class="legend"><span><i style="background:var(--M)"></i>R</span><span><i style="background:var(--m)"></i>3 / ♭3</span><span><i style="background:#4cc38a"></i>5 / ♭5</span><span><i style="background:#323842"></i>音階音</span></div>
-    ${boardSVG({ from: 0, to: 16, ch: 28, cw: 54, marks: [...map.values()], width: 300 })}
+    ${boardSVG({ from: 0, to: 16, ch: 28, cw: 54, marks: [...map.values()], width: 300, anim: true })}
   </div>`;
 }
 
@@ -383,6 +445,7 @@ function viewSong() {
     <label class="small"><input type="checkbox" data-song="notes" ${sg.notes ? 'checked' : ''}> 音符聲</label>
     <label class="small"><input type="checkbox" data-song="cover" ${sg.cover ? 'checked' : ''}> 遮住音名</label>
   </div>
+  <div class="nowpanel" id="nowpanel" data-bar="${sg.sel}">${songPanelInner(sg.sel)}</div>
   <div class="barsgrid">${grid}</div>
   ${songDetail(plan[sg.sel])}`;
 }
@@ -402,20 +465,52 @@ function songDetail(bar) {
 }
 
 function songBeatHz(b) { return fretHz(b.s, b.f); }
+// 目前小節的指板：四拍的位置各標上拍數，播放時光圈在音與音之間滑動
+function songPanelInner(bi) {
+  const bar = curPlan()[bi], frets = bar.beats.map(b => b.f);
+  const from = Math.max(1, Math.min(...frets) - 1), to = Math.max(Math.max(...frets) + 1, from + 5);
+  const pos = new Map();
+  bar.beats.forEach((b, k) => {
+    const key = `${b.s}:${b.f}`;
+    if (!pos.has(key)) pos.set(key, { s: b.s, f: b.f, cls: { R: 'root', 3: 't3', 5: 't5', '→': 'appr' }[b.role], label: fmtN(b.note), beats: [] });
+    const m = pos.get(key); m.beats.push(k); m.tag = m.beats.map(x => x + 1).join('·');
+  });
+  const syms = bar.chords.map(c => `<span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join(' ');
+  const chips = bar.beats.map((b, k) => `<span class="npb ${BEAT_ROLE[b.role]}" data-beat="${k}"><small>${k + 1}</small>${fmtN(b.note)}</span>`).join('');
+  return `<div class="npboard">${boardSVG({ from, to, ch: 30, cw: 50, marks: [...pos.values()], anim: true, aria: '這一小節的音位置' })}</div>
+    <div class="npinfo"><div class="npt">第 ${bar.n} 小節　${syms}</div><div class="npbeats">${chips}</div></div>`;
+}
+function songFocusBeat(k, ms) {
+  const pan = document.querySelector('#nowpanel'), svg = pan && pan.querySelector('svg.board');
+  if (!svg) return;
+  const dot = b => svg.querySelector(`.dot[data-b~="${b}"]`);
+  pan.querySelectorAll('.npb.now').forEach(e => e.classList.remove('now'));
+  pan.querySelector(`.npb[data-beat="${k}"]`)?.classList.add('now');
+  if (k === 0) svg.querySelectorAll('.trail').forEach(t => t.remove());
+  if (dot(k)) focusDot(svg, dot(k), k > 0 ? dot(k - 1) : null, ms);
+}
 function songBarPlay(bar, bpm = state.song.bpm) {
   const dt = 60 / bpm;
-  bar.beats.forEach((b, i) => tone(songBeatHz(b), i * dt, dt * 0.9, 0.3));
+  animClear();
+  bar.beats.forEach((b, i) => {
+    tone(songBeatHz(b), i * dt, dt * 0.9, 0.3);
+    later(() => songFocusBeat(i, Math.min(300, dt * 600)), i * dt * 1000);
+  });
+  later(animClear, 4 * dt * 1000 + 500);
 }
 
 function songMark() {
   const sg = state.song;
   document.querySelectorAll('.bar.now, .bw.now').forEach(e => e.classList.remove('now'));
-  if (!sg.playing || state.tab !== 'song') return;
-  const bi = songBars()[sg.pos];
+  if (state.tab !== 'song') return;
+  const pan = document.querySelector('#nowpanel'), bi = sg.playing ? songBars()[sg.pos] : sg.sel;
+  if (pan && +pan.dataset.bar !== bi) { pan.dataset.bar = bi; pan.innerHTML = songPanelInner(bi); }
+  if (!sg.playing) return;
   const el = document.querySelector(`.bar[data-bar="${bi}"]`);
   if (!el) return;
   el.classList.add('now');
   el.querySelector(`.bw[data-beat="${sg.beat}"]`)?.classList.add('now');
+  songFocusBeat(sg.beat, Math.min(300, (60000 / sg.bpm) * 0.6));
 }
 
 function songTick() {
@@ -440,7 +535,7 @@ function songStart() {
 }
 function songStop() {
   const sg = state.song;
-  sg.playing = false; clearTimeout(sg.timer); sg.timer = null; songMark();
+  sg.playing = false; clearTimeout(sg.timer); sg.timer = null; animClear(); songMark();
 }
 
 /* ================= 測驗 ================= */
@@ -623,7 +718,11 @@ function init() {
       if (act === 'note') {
         const midi = [60, 62, 64, 65, 67, 69, 71][+a.dataset.i];
         tone(440 * 2 ** ((midi - 69) / 12), 0, 1.0, 0.3);
-      } else if (act === 'play') playChord(K.degrees[state.deg]);
+      } else if (act === 'play') {
+        playChord(K.degrees[state.deg]);
+        const svg = $('#view .shapes svg.board') || $('#view svg.board');
+        if (svg) animateChord(svg);
+      }
       else if (act === 'deg') { state.deg = +a.dataset.i; render(); }
       else if (act === 'toboard') { state.tab = 'board'; store.set('tab', 'board'); window.scrollTo(0, 0); render(); }
       else if (act === 'qtype') {
