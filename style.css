@@ -175,3 +175,10 @@ svg .dot.nat+.lbl{opacity:1;fill:#7b8491;font-weight:500}
 .npbeats.pitch{display:block;position:relative;flex:1;min-height:130px}
 .npbeats.pitch .npb{position:absolute;width:24%;height:56px;padding:0;box-sizing:border-box;transition:transform .2s,box-shadow .2s}
 .nphint{text-align:center;font-size:12px}
+/* song: make the bar being played stand out */
+.bar{transition:transform .15s,box-shadow .15s,background .15s,border-color .15s}
+.bar.now{position:relative;z-index:1;transform:scale(1.05);background:#17402f;border-color:#5ee6a0;
+  box-shadow:0 0 0 3px rgba(94,230,160,.35),0 0 22px rgba(94,230,160,.5)}
+.bar.now .bn{align-self:flex-start;background:#5ee6a0;color:#0e2a1e;border-radius:6px;padding:0 8px;font-size:12px;font-weight:700}
+.bar.now .bw.now{background:rgba(255,255,255,.3);box-shadow:0 0 0 2px #fff}
+@media (prefers-reduced-motion:reduce){.bar,.bar.now{transition:none}.bar.now{transform:none}}
