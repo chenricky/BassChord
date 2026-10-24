@@ -155,3 +155,9 @@ svg .dot.nat+.lbl{fill:#eceff4;font-weight:600;font-size:13px}
 svg .sno{fill:var(--text);font-weight:700;font-size:14px}
 svg .fn.fnb{fill:#eceff4;font-weight:700}
 .npb em{position:absolute;bottom:2px;right:7px;font-size:11px;font-style:normal;font-weight:600;opacity:.8}
+/* song: beats in one row */
+.npbeats{grid-template-columns:repeat(4,1fr);gap:6px;align-content:center}
+.npb{padding:18px 0 16px;font-size:clamp(14px,3.2vw,22px);min-width:0}
+.npb small{left:4px;font-size:10px}
+.npb em{right:4px;font-size:10px}
+@media (max-width:560px){.npb{padding:12px 0 14px;font-size:15px}.npbeats{gap:4px}}
