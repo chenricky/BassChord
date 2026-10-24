@@ -168,3 +168,6 @@ svg .fn.fnb{fill:#eceff4;font-weight:700}
 .songhint{margin:8px 0;gap:8px}
 .songhint .btn{padding:4px 10px;font-size:14px}
 .npcount{margin-left:10px;color:var(--M);font-weight:700;font-size:18px}
+/* song: dim the notes that are not used in the current bar */
+svg .dot.nat{opacity:.5}
+svg .dot.nat+.lbl{opacity:.5}
