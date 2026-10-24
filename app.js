@@ -803,6 +803,7 @@ function init() {
         sg.sel = i; sg.revealed.add(i);
         if (sg.playing) { const at = songBars().indexOf(i); if (at >= 0) { sg.pos = at; sg.beat = 0; } }
         render();
+        if (!sg.playing) songBarPlay(curPlan()[i]); // 點小節就彈這一小節，並在指板上依序亮起
       } else if (act === 'songplay') { if (state.song.playing) songStop(); else songStart(); render(); }
       else if (act === 'songbarplay') songBarPlay(curPlan()[state.song.sel]);
       else if (act === 'bpm') {
