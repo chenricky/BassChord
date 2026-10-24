@@ -508,7 +508,9 @@ const bpmNow = () => state.song.bpm;
 function songDetail(bar) {
   const rules = bar.chords.map(c => `${c.rule}：<b>${c.notes.map(fmtN).join(' ')}</b>`).join('<br>');
   const seq = bar.beats.map((b, i) => `<span class="small">${i + 1} 拍</span> ${noteLabel(b, false)} <span class="small">${STRINGS[b.s]} 弦 ${b.f} 格${b.fin ? '　' + FINGER[b.fin] + '指' : ''}</span>`).join('<br>');
+  // 減和弦的指法之後再補，這裡先不顯示指型圖和手指
   const shapes = bar.chords.map(c => {
+    if (c.q === 'd') return `<div class="shape small">${fmtN(c.sym)} · 減和弦的指型之後補上</div>`;
     const fr = c.pos.pts.map(p => p.f), from = Math.max(1, Math.min(...fr) - 1), to = Math.max(Math.max(...fr) + 1, from + 4);
     const marks = c.pos.pts.map(p => ({ s: p.s, f: p.f, cls: ptCls(p.r), label: p.r, fin: p.fin }));
     return `<div class="shape"><h4>${fmtN(c.sym)} · ${Q[c.q].full}（${STRINGS[c.pos.s]} 弦根音）</h4>${boardSVG({ from, to, marks, width: 190, aria: '和弦指型' })}</div>`;
