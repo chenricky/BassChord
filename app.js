@@ -421,6 +421,7 @@ function chordSpots(c) {
     for (let n = 1; n <= FRET_MAX; n++) {
       if ((OPEN_PC[s] + n) % 12 !== c.pc) continue;
       SHAPES[c.q].forEach((sh, v) => {
+        if (c.q === 'd' && v > 0) return; // 歌曲裡減和弦只用指型 A
         const pts = sh.pts.map(p => ({ r: p.r, role: p.r === 'R' ? 'R' : p.r.endsWith('3') ? '3' : '5', s: s + p.s - 1, f: n + p.d, fin: p.f }));
         if (pts.every(p => p.s <= 3 && p.f >= 1 && p.f <= FRET_MAX)) {
           out.push({ s, n, v, name: sh.name, pts, mean: pts.reduce((a, p) => a + p.f, 0) / pts.length });
