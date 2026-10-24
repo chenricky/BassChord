@@ -178,19 +178,25 @@ function animateChord(svg) {
 
 /* ================= 指板 SVG ================= */
 function boardSVG(o) {
-  const cw = o.cw || 46, ch = o.ch || 32, L = o.left || 38, T = 22, R = 28;
+  const cw = o.cw || 46, ch = o.ch || 32, L = o.left || 38, T = o.strNums ? 40 : 22, R = 28;
   const rows = o.to - o.from + 1, W = L + cw * 3 + R, H = T + ch * rows + 8;
   const sx = s => L + s * cw, ry = f => T + (f - o.from) * ch;
   const rad = Math.min(12, ch / 2 - 3);
   let h = `<svg class="board" viewBox="0 0 ${W} ${H}" width="${o.width || W}" role="img" aria-label="${o.aria || '貝斯指板'}">`;
-  STRINGS.forEach((n, s) => { h += `<text class="sn" x="${sx(s)}" y="13">${n}</text>`; });
+  STRINGS.forEach((n, s) => {
+    if (o.strNums) h += `<text class="sn sno" x="${sx(s)}" y="13">${4 - s}</text><text class="sn" x="${sx(s)}" y="31">${n}</text>`;
+    else h += `<text class="sn" x="${sx(s)}" y="13">${n}</text>`;
+  });
   for (let r = 0; r <= rows; r++) {
     const y = T + r * ch, nut = o.from + r === 1;
     h += `<line class="${nut ? 'nut' : 'ln'}" x1="${L}" x2="${L + cw * 3}" y1="${y}" y2="${y}"/>`;
   }
   for (let s = 0; s < 4; s++) h += `<line class="str" x1="${sx(s)}" x2="${sx(s)}" y1="${T}" y2="${T + ch * rows}"/>`;
   if (o.fretNums !== false) {
-    for (let f = o.from; f <= o.to; f++) h += `<text class="fn" x="${L - 10}" y="${ry(f) + ch / 2 + 4}">${f}</text>`;
+    for (let f = o.from; f <= o.to; f++) {
+      const t = o.fretLabel ? o.fretLabel(f) : f;
+      if (t !== '') h += `<text class="fn ${o.fretStrong && o.fretStrong.includes(f) ? 'fnb' : ''}" x="${L - 18}" y="${ry(f) + ch / 2 + 4}">${t}</text>`;
+    }
   }
   if (o.click) {
     for (let f = o.from; f <= o.to; f++) {
@@ -393,12 +399,12 @@ function planSong(song) {
   return bars;
 }
 
-// 只用前六格（第 1–6 格）：每個音名在指板上的可選位置
+// 只用空弦和前六格（第 0–6 格）：每個音名在指板上的可選位置
 const OPEN_PC = [4, 9, 2, 7]; // E A D G
 const FRET_MAX = 6;
 function noteSpots(note) {
   const pc = pcOfName(note), out = [];
-  OPEN_PC.forEach((o, s) => { const f = (pc - o + 12) % 12; if (f >= 1 && f <= FRET_MAX) out.push({ s, f }); });
+  OPEN_PC.forEach((o, s) => { const f = (pc - o + 12) % 12; if (f <= FRET_MAX) out.push({ s, f }); });
   return out;
 }
 // 整首歌一起找「手移動最少」的位置（換弦比換格費力，所以權重較高）
@@ -479,7 +485,7 @@ const bpmNow = () => state.song.bpm;
 
 function songDetail(bar) {
   const rules = bar.chords.map(c => `${c.rule}：<b>${c.notes.map(fmtN).join(' ')}</b>`).join('<br>');
-  const seq = bar.beats.map((b, i) => `<span class="small">${i + 1} 拍</span> ${noteLabel(b, false)} <span class="small">${STRINGS[b.s]} 弦 ${b.f} 格</span>`).join('<br>');
+  const seq = bar.beats.map((b, i) => `<span class="small">${i + 1} 拍</span> ${noteLabel(b, false)} <span class="small">${STRINGS[b.s]} 弦 ${b.f ? b.f + ' 格' : '空弦'}</span>`).join('<br>');
   return `<div class="card">
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">第 ${bar.n} 小節（${bar.sec} 段）</h2>
       <button class="btn" data-act="songbarplay">▶ 試聽這小節</button></div>
@@ -492,23 +498,23 @@ function songBeatHz(b) { return fretHz(b.s, b.f); }
 // 目前小節的指板：四拍的位置各標上拍數，播放時光圈在音與音之間滑動
 function songPanelInner(bi) {
   const bar = curPlan()[bi], key = buildKey(curSong().key), pos = new Map();
-  // 底圖：前六格上的調內音（音名＋簡譜數字），像筆記上的音階圖
+  // 底圖：空弦與前六格上的調內音（只標音名），像標準的貝斯指板音名圖
   STRINGS.forEach((n, s) => {
-    for (let f = 1; f <= FRET_MAX; f++) {
+    for (let f = 0; f <= FRET_MAX; f++) {
       const idx = key.pcs.indexOf((OPEN_PC[s] + f) % 12);
-      if (idx >= 0) pos.set(`${s}:${f}`, { s, f, cls: 'scale', label: fmtN(key.scale[idx]), tag: idx + 1, tagCls: 'dimn', beats: [] });
+      if (idx >= 0) pos.set(`${s}:${f}`, { s, f, cls: 'nat', label: fmtN(key.scale[idx]), beats: [] });
     }
   });
   bar.beats.forEach((b, k) => {
     const id = `${b.s}:${b.f}`, old = pos.get(id);
-    const m = old && old.cls !== 'scale' ? old : { s: b.s, f: b.f, beats: [] };
+    const m = old && old.cls !== 'nat' ? old : { s: b.s, f: b.f, beats: [] };
     m.cls = { R: 'root', 3: 't3', 5: 't5', '→': 'appr' }[b.role]; m.label = fmtN(b.note); m.tagCls = 'tagn';
     m.beats.push(k); m.tag = m.beats.map(x => x + 1).join('·');
     pos.set(id, m);
   });
   const syms = bar.chords.map(c => `<span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join(' ');
   const chips = bar.beats.map((b, k) => `<span class="npb ${BEAT_ROLE[b.role]}" data-beat="${k}"><small>${k + 1}</small>${fmtN(b.note)}</span>`).join('');
-  return `<div class="npboard">${boardSVG({ from: 1, to: FRET_MAX, ch: 44, cw: 52, left: 56, marks: [...pos.values()], anim: true, aria: '前六格指板，這一小節的音位置' })}</div>
+  return `<div class="npboard">${boardSVG({ from: 0, to: FRET_MAX, ch: 40, cw: 54, left: 66, strNums: true, fretStrong: [3, 5], fretLabel: f => (f === 0 ? '' : f === 3 || f === 5 ? `${f} 格 ▸` : String(f)), marks: [...pos.values()], anim: true, aria: '空弦與前六格指板，這一小節的音位置' })}</div>
     <div class="npinfo"><div class="npt">第 ${bar.n} 小節　${syms}</div><div class="npbeats">${chips}</div></div>`;
 }
 function songFocusBeat(k, ms) {
