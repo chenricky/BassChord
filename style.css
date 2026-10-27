@@ -187,3 +187,11 @@ svg .dot.nat+.lbl{opacity:1;fill:#7b8491;font-weight:500}
 .pwform input{flex:1;min-width:0;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px}
 .pwmsg{min-height:1.4em;margin:8px 0 0;color:var(--d);font-size:14px}
 #pwchangemsg{color:var(--ok)}
+/* song: chord quality label in the now-playing panel */
+.npchords{display:flex;flex-wrap:wrap;gap:6px 14px}
+.npc{display:inline-flex;align-items:center;gap:6px;transition:opacity .15s}
+.npc.dim{opacity:.35}
+.npc .cs{font-size:22px}
+.npq{font-size:15px;font-weight:700;padding:2px 10px;border-radius:999px;color:#14161a}
+.npq.qM{background:var(--M)} .npq.qm{background:var(--m)} .npq.qd{background:var(--d)}
+.npq{white-space:nowrap}.npc{flex-wrap:nowrap}

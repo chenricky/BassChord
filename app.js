@@ -153,6 +153,7 @@ function animClear() {
   document.querySelectorAll('svg.board .ring').forEach(r => { r.style.opacity = 0; });
   document.querySelectorAll('svg.board .trail').forEach(t => t.remove());
   document.querySelectorAll('.npb.now').forEach(e => e.classList.remove('now'));
+  document.querySelectorAll('.npc.dim').forEach(e => e.classList.remove('dim'));
 }
 const later = (fn, ms) => animTimers.push(setTimeout(fn, ms));
 // 把光圈滑到某個音，留下一條軌跡線，並讓該音放大發光
@@ -606,7 +607,8 @@ function songPanelInner(bi) {
     if (b.fin) m.fin = b.fin;
     pos.set(id, m);
   });
-  const syms = bar.chords.map(c => `<span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join(' ');
+  // 和弦名稱旁標出「大和弦／小和弦／減和弦」；一小節兩個和弦時，播放中會讓目前這個亮起
+  const syms = bar.chords.map((c, ci) => `<span class="npc" data-ci="${ci}"><span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span><span class="npq ${Q[c.q].cls}">${Q[c.q].full}</span></span>`).join('');
   // 音塊的高低依「絕對音高」排列：整首歌最低的音在最下面，最高的音在最上面
   const semi = b => 12 * Math.log2(songBeatHz(b) / OPEN_HZ[0]);
   const all = curPlan().flatMap(x => x.beats.map(semi)), lo = Math.min(...all), hi = Math.max(...all);
@@ -615,7 +617,7 @@ function songPanelInner(bi) {
     return `<span class="npb ${BEAT_ROLE[b.role]}" data-beat="${k}" style="left:${k * 25 + 0.5}%;top:calc(${(1 - t).toFixed(3)} * (100% - 56px))"><small>${k + 1}</small>${fmtN(b.note)}${b.fin ? `<em>${FINGER[b.fin]}</em>` : ''}</span>`;
   }).join('');
   return `<div class="npboard">${boardSVG({ from: 1, to: FRET_MAX, ch: 36, cw: 54, left: 66, right: 32, strNums: true, fretStrong: [3, 5, 7], fretLabel: f => (f === 3 || f === 5 || f === 7 ? `${f} 格 ▸` : String(f)), marks: [...pos.values()], anim: true, aria: '前六格指板，這一小節的音位置' })}</div>
-    <div class="npinfo"><div class="npt">第 ${bar.n} 小節　${syms}<span class="npcount">${state.song.countText || ''}</span></div><div class="npbeats pitch">${chips}</div><div class="small nphint">音塊越高，音越高</div></div>`;
+    <div class="npinfo"><div class="npt">第 ${bar.n} 小節<span class="npcount">${state.song.countText || ''}</span></div><div class="npchords">${syms}</div><div class="npbeats pitch">${chips}</div><div class="small nphint">音塊越高，音越高</div></div>`;
 }
 function songFocusBeat(k, ms) {
   const pan = document.querySelector('#nowpanel'), svg = pan && pan.querySelector('svg.board');
@@ -623,6 +625,8 @@ function songFocusBeat(k, ms) {
   const dot = b => svg.querySelector(`.dot[data-b~="${b}"]`);
   pan.querySelectorAll('.npb.now').forEach(e => e.classList.remove('now'));
   pan.querySelector(`.npb[data-beat="${k}"]`)?.classList.add('now');
+  const cs = pan.querySelectorAll('.npc');
+  if (cs.length > 1) cs.forEach((e, ci) => e.classList.toggle('dim', ci !== (k < 2 ? 0 : 1)));
   if (k === 0) svg.querySelectorAll('.trail').forEach(t => t.remove());
   if (dot(k)) focusDot(svg, dot(k), k > 0 ? dot(k - 1) : null, ms);
 }
