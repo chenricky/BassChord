@@ -306,7 +306,8 @@ function viewChords() {
     <tbody>${rows}</tbody>
   </table>
   ${K.key === 'C' ? '' : '<p class="small">口訣只適用於 C 大調。</p>'}
-  <p class="small">大 · 小 · 小 · 大 · 大 · 小 · 減 —— 每個大調都一樣。</p></div>
+  <p class="small">大 · 小 · 小 · 大 · 大 · 小 · 減 —— 每個大調都一樣。</p>
+  <p class="small distnote"><b>距離</b>：數字代表每個音之間大致相距的格數，是大致的相對關係，是幫助記憶的方法。以 C 大調來說，根音是 0，下一個音大約距離 1 格，第三個音大約距離 2 格。以小和弦指型 B 來說：第一個音與第二個音在同一條弦上，相距 4 格；第三個音大約與第一個音相距 2 格。（個人的記憶方法）</p></div>
   ${chordDetail(K.degrees[state.deg])}`;
 }
 

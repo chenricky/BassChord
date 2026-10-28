@@ -209,3 +209,4 @@ svg .dot.nat+.lbl{opacity:1;fill:#7b8491;font-weight:500}
   .tri td.dist{font-size:12px;letter-spacing:0}
   .tri td.small{font-size:11px}
 }
+.distnote{line-height:1.7;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}.distnote b{color:var(--text)}
