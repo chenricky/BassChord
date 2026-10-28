@@ -196,6 +196,16 @@ svg .dot.nat+.lbl{opacity:1;fill:#7b8491;font-weight:500}
 .npq.qM{background:var(--M)} .npq.qm{background:var(--m)} .npq.qd{background:var(--d)}
 .npq{white-space:nowrap}.npc{flex-wrap:nowrap}
 /* triads table: keep 和弦音 and 大小 side by side */
-.tri th:nth-child(1),.tri td:nth-child(1){width:11%}
-.tri th:nth-child(2),.tri td:nth-child(2){width:19%}
-.tri th:nth-child(3),.tri td:nth-child(3){width:12%}
+.tri th:nth-child(1),.tri td:nth-child(1){width:10%}
+.tri th:nth-child(2),.tri td:nth-child(2){width:17%}
+.tri th:nth-child(3),.tri td:nth-child(3){width:10%}
+.tri th:nth-child(4),.tri td:nth-child(4){width:26%}
+.tri td.dist{font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.nw{white-space:nowrap}
+@media (max-width:560px){
+  .tri{font-size:13px}
+  .tri th,.tri td{padding-left:3px;padding-right:3px;width:auto !important}
+  .tri th,.tri .nt,.tri .rn{white-space:nowrap}
+  .tri td.dist{font-size:12px;letter-spacing:0}
+  .tri td.small{font-size:11px}
+}

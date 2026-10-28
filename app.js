@@ -276,6 +276,9 @@ function viewPitch() {
 }
 
 /* ================= 畫面：三和弦 ================= */
+// 距離：根音、三音、五音的距離（大和弦一種，小和弦與減和弦各兩種指型）
+const DIST = { M: ['0-1-2'], m: ['0-2-2', '0-4-2'], d: ['0-2-1', '0-4-1'] };
+
 function viewChords() {
   const c = state.cover;
   const cell = (col, i, html, cls = '') => {
@@ -287,6 +290,7 @@ function viewChords() {
       <td class="rn">${d.roman}</td>
       ${cell('notes', d.i, `<span class="nt">${fmtNotes(d)}</span>`)}
       ${cell('q', d.i, Q[d.q].zh, 'q ' + Q[d.q].cls)}
+      <td class="dist">${DIST[d.q].map(v => `<span class="nw">${v}</span>`).join('<span class="small"> 或 </span>')}</td>
       ${cell('mn', d.i, d.mn ? d.mn[0] : '—', 'small')}
     </tr>`).join('');
   return `
@@ -298,7 +302,7 @@ function viewChords() {
     <label><input type="checkbox" data-cover="q" ${c.q ? 'checked' : ''}>大小</label>
   </div>
   <div class="card"><table class="tri">
-    <thead><tr><th>級數</th><th>和弦音</th><th style="text-align:center">大小</th><th>口訣</th></tr></thead>
+    <thead><tr><th>級數</th><th>和弦音</th><th style="text-align:center">大小</th><th>距離</th><th>口訣</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   ${K.key === 'C' ? '' : '<p class="small">口訣只適用於 C 大調。</p>'}
