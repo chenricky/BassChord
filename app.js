@@ -286,8 +286,8 @@ function viewChords() {
     <tr data-i="${d.i}" class="${d.i === state.deg ? 'sel' : ''}">
       <td class="rn">${d.roman}</td>
       ${cell('notes', d.i, `<span class="nt">${fmtNotes(d)}</span>`)}
-      ${cell('mn', d.i, d.mn ? d.mn[0] : '—', 'small')}
       ${cell('q', d.i, Q[d.q].zh, 'q ' + Q[d.q].cls)}
+      ${cell('mn', d.i, d.mn ? d.mn[0] : '—', 'small')}
     </tr>`).join('');
   return `
   <h2>${fmtKey(K.key)} 大調順階和弦</h2>
@@ -298,7 +298,7 @@ function viewChords() {
     <label><input type="checkbox" data-cover="q" ${c.q ? 'checked' : ''}>大小</label>
   </div>
   <div class="card"><table class="tri">
-    <thead><tr><th>級數</th><th>和弦音</th><th>口訣</th><th style="text-align:center">大小</th></tr></thead>
+    <thead><tr><th>級數</th><th>和弦音</th><th style="text-align:center">大小</th><th>口訣</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   ${K.key === 'C' ? '' : '<p class="small">口訣只適用於 C 大調。</p>'}

@@ -195,3 +195,7 @@ svg .dot.nat+.lbl{opacity:1;fill:#7b8491;font-weight:500}
 .npq{font-size:15px;font-weight:700;padding:2px 10px;border-radius:999px;color:#14161a}
 .npq.qM{background:var(--M)} .npq.qm{background:var(--m)} .npq.qd{background:var(--d)}
 .npq{white-space:nowrap}.npc{flex-wrap:nowrap}
+/* triads table: keep 和弦音 and 大小 side by side */
+.tri th:nth-child(1),.tri td:nth-child(1){width:11%}
+.tri th:nth-child(2),.tri td:nth-child(2){width:19%}
+.tri th:nth-child(3),.tri td:nth-child(3){width:12%}
