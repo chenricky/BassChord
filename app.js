@@ -884,6 +884,25 @@ function lessonTabs() {
 function viewChords() {
   return lessonTabs() + (state.lesson === 2 ? viewChordsLesson2() : viewChordsLesson1());
 }
+// 原理示意圖：用「n」代表根音所在的格，畫出第 n-2 到 n+3 格
+function stepSVG(kind) {
+  const R = { s: 0, f: 3 };                                       // 根音：E 弦第 n 格（第 3 列）
+  const mk = (s, f, cls, label) => ({ s, f, cls, label });
+  let marks = [mk(0, 3, 'root', 'R')], links = [];
+  if (kind === 'A') {                                              // Ⓐ：下一弦＋左一格（小三度左二格）
+    marks.push(mk(1, 2, 't3', '3'), mk(1, 1, 'nat', '♭3'));
+    links = [{ a: R, b: { s: 1, f: 2 }, cls: 'on' }, { a: R, b: { s: 1, f: 1 }, cls: '' }];
+  } else if (kind === 'B') {                                       // Ⓑ：下二弦＋右二格
+    marks.push(mk(2, 5, 'root', 'R′'));
+    links = [{ a: R, b: { s: 2, f: 5 }, cls: 'on' }];
+  } else {                                                         // Ⓐ＋Ⓑ：先找高八度根音，再找它的三度音
+    marks.push(mk(2, 5, 'root', 'R′'), mk(3, 4, 't3', '3′'), mk(3, 3, 'nat', '♭3′'));
+    links = [{ a: R, b: { s: 2, f: 5 }, cls: '' }, { a: { s: 2, f: 5 }, b: { s: 3, f: 4 }, cls: 'on' }, { a: { s: 2, f: 5 }, b: { s: 3, f: 3 }, cls: '' },
+             { a: R, b: { s: 3, f: 4 }, cls: 'dash' }];
+  }
+  return boardSVG({ from: 1, to: 6, ch: 34, cw: 44, left: 46, right: 30, marks, links, fretLabel: f => ['n−2', 'n−1', 'n', 'n+1', 'n+2', 'n+3'][f - 1], fretStrong: [3], width: 220, aria: '位置原理示意圖' });
+}
+
 function viewChordsLesson2() {
   const sel = K.degrees[state.deg], marks = [], links = [];
   K.degrees.forEach(d => {
@@ -902,17 +921,41 @@ function viewChordsLesson2() {
   return `
   <h2>三和弦練習（二）</h2>
   <p class="sub">在 E 弦上找出 ${fmtKey(K.key)} 大調音階的音，並彈出相對應的順階和弦。這種彈法不是分開彈，而是<b>根音</b>和<b>高八度的三度音</b>用兩隻手指一起彈。</p>
-  <div class="card small lesson2rules">
-    <div><b>Ⓐ 三度音</b>有「下一弦」＋「左一格」的規則（小三度 ♭3 是「左二格」）。</div>
-    <div><b>Ⓑ 八度音</b>有「下二弦」＋「右二格」的規則。</div>
-    <div>因為 Ⓐ 和 Ⓑ，所以順階和弦的根音（R）和和弦中的三度音（高八度的三度音），在圖上就有固定的相對關係：<b>根音往下三條弦、往右一格是大三度，小三度（♭3）則是同一格。</b></div>
+  <h3>位置是怎麼來的？</h3>
+  <div class="card lesson2">
+    <p class="small">圖中的「n」是根音所在的那一格。黃色是根音，藍色是三度音，空心圓是小三度（♭3）。三張圖依序看：</p>
+    <div class="shapes">
+      <div class="shape"><h4>Ⓐ 三度音的規則</h4>${stepSVG('A')}</div>
+      <div class="shape"><h4>Ⓑ 八度音的規則</h4>${stepSVG('B')}</div>
+      <div class="shape"><h4>Ⓐ＋Ⓑ 高八度的三度音</h4>${stepSVG('AB')}</div>
+    </div>
+    <div class="steps small">
+      <p><b>Ⓐ 三度音：</b>從根音 R 出發，往「<b>下一弦</b>」、「<b>左一格</b>」，就是大三度（3）。小三度（♭3）是「左二格」。</p>
+      <p><b>Ⓑ 八度音：</b>從根音 R 出發，往「<b>下二弦</b>」、「<b>右二格</b>」，就是高八度的根音（R′）。</p>
+      <p><b>Ⓐ＋Ⓑ：</b>要找「高八度的三度音」，先用 Ⓑ 找到高八度的根音 R′，再從 R′ 用 Ⓐ 的規則（下一弦、左一格；小三度左二格）找到 3′。把兩步合起來：從根音出發，往「<b>下三弦</b>」、「<b>右一格</b>」就是高八度的大三度，小三度則是「下三弦」、<b>同一格</b>（圖上的虛線）。</p>
+      <p>所以順階和弦的根音（R）和高八度的三度音，在指板上才會有下面那張圖的連線關係。兩個音用兩隻手指<b>一起</b>彈，不是分開彈。</p>
+    </div>
+    <h4 class="whyh">為什麼是這樣？（用半音來算）</h4>
+    <div class="small why">
+      <p>琴頸上一格＝1 個半音，相鄰兩條弦相差 5 個半音（四度）。</p>
+      <p>大三度＝4 個半音＝5－1 → 下一弦、<b>左一格</b>。小三度＝3 個半音＝5－2 → 下一弦、<b>左二格</b>。</p>
+      <p>八度＝12 個半音＝5＋5＋2 → 下二弦、<b>右二格</b>。</p>
+      <p>高八度的大三度＝16＝5＋5＋5＋1 → 下三弦、<b>右一格</b>。高八度的小三度＝15＝5＋5＋5＋0 → 下三弦、<b>同一格</b>。</p>
+    </div>
   </div>
+  <h3>實際位置</h3>
   <div class="chips">${chips}</div>
   <div class="card">
     <div class="row" style="justify-content:space-between">
       <div><b class="${q.cls}">${sel.roman} · ${fmtN(sel.root)} ${q.full}</b>
         <div class="small">根音 ${fmtN(sel.root)}：E 弦第 ${y.n} 格　＋　${y.lbl === '3' ? '三度音' : '小三度音（♭3）'} ${fmtN(y.third)}：G 弦第 ${y.t} 格　｜　兩隻手指一起彈</div></div>
       <button class="btn" data-act="dyad">▶ 一起彈</button>
+    </div>
+    <div class="small walk">
+      <div>① 根音 ${fmtN(sel.root)}：E 弦第 ${y.n} 格。</div>
+      <div>② 高八度的 ${fmtN(sel.root)}（Ⓑ）：下二弦、右二格 → D 弦第 ${y.n + 2} 格。</div>
+      <div>③ ${y.lbl === '3' ? '三度音' : '小三度音'} ${fmtN(y.third)}（Ⓐ）：從 D 弦第 ${y.n + 2} 格，下一弦、左${y.lbl === '3' ? '一' : '二'}格 → G 弦第 ${y.t} 格。</div>
+      <div>④ 合起來：根音（E 弦 ${y.n}）和三度音（G 弦 ${y.t}），${y.lbl === '3' ? '下三弦、右一格' : '下三弦、同一格'}，兩隻手指一起彈。</div>
     </div>
     <div class="legend"><span><i style="background:var(--M)"></i>根音</span><span><i style="background:var(--m)"></i>三度音（高八度）</span></div>
     ${boardSVG({ from: 1, to: 15, ch: 26, cw: 54, left: 52, right: 40, strNums: true, marks, links, width: 300, aria: 'E 弦根音與 G 弦三度音' })}

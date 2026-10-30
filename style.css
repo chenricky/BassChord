@@ -216,3 +216,10 @@ svg .link{stroke:#4a525e;stroke-width:1.4;opacity:.7}
 svg .link.on{stroke:#fff;stroke-width:3;opacity:.95}
 .lesson2rules{line-height:1.8}
 .lesson2rules b{color:var(--text)}
+
+.lesson2 .steps p,.lesson2 .why p{margin:8px 0;line-height:1.8}
+.lesson2 b{color:var(--text)}
+.whyh{margin:14px 0 4px;font-size:15px;color:var(--text)}
+.why{background:#181b21;border-radius:10px;padding:6px 12px}
+.walk{line-height:1.9;margin:8px 0;padding:8px 12px;background:#181b21;border-radius:10px}
+svg .link.dash{stroke:var(--M);stroke-width:2;stroke-dasharray:5 4;opacity:.9}
