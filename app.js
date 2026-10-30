@@ -1000,15 +1000,17 @@ function holdPostureSVG() {
   </svg>`;
 }
 function holdHandSVG() {
+  // 手心朝向我們：四隻手指張開，大拇指折進手心，指尖大約在中指的下面
   const f = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#e8a54b" stroke-width="26" stroke-linecap="round"/>`;
-  return `<svg class="holdsvg" viewBox="0 0 340 270" role="img" aria-label="左手的手指：食、中、無、小與大拇指">
-    <rect x="130" y="150" width="120" height="76" rx="34" fill="#e8a54b"/>
-    <ellipse cx="116" cy="204" rx="44" ry="26" transform="rotate(-32 116 204)" fill="#e8a54b"/>
-    ${f(150, 168, 96, 94)}${f(182, 160, 182, 62)}${f(214, 166, 244, 84)}${f(236, 188, 282, 136)}
+  return `<svg class="holdsvg" viewBox="0 0 340 280" role="img" aria-label="左手的手指：大拇指折進去，放在中指的下面">
+    <rect x="96" y="150" width="170" height="100" rx="36" fill="#e8a54b"/>
+    ${f(122, 162, 88, 74)}${f(164, 156, 170, 48)}${f(206, 162, 240, 82)}${f(246, 188, 300, 136)}
+    <path d="M52 236 C92 222 128 196 154 168" fill="none" stroke="#d68b2f" stroke-width="30" stroke-linecap="round"/>
+    <circle cx="156" cy="166" r="12" fill="#f0bd72" stroke="#b8741f" stroke-width="2"/>
     <g fill="var(--text)" font-size="17" font-weight="700" text-anchor="middle">
-      <text x="78" y="78">食</text><text x="182" y="40">中</text><text x="256" y="68">無</text><text x="304" y="128">小</text>
+      <text x="72" y="62">食</text><text x="172" y="30">中</text><text x="256" y="72">無</text><text x="314" y="128">小</text>
     </g>
-    <g fill="var(--text)" text-anchor="middle"><text x="116" y="252" font-size="15" font-weight="700">大拇指（在中指位）</text></g>
+    <g fill="var(--text)" font-size="14" font-weight="700" text-anchor="middle"><text x="130" y="272">大拇指：折進去，放在中指的下面</text></g>
   </svg>`;
 }
 function viewHold() {
@@ -1030,7 +1032,7 @@ function viewHold() {
     <div class="holdfig">${holdHandSVG()}</div>
     <ul class="holdlist">
       <li><b>食</b>＝食指，<b>中</b>＝中指，<b>無</b>＝無名指，<b>小</b>＝小指。</li>
-      <li><b>大拇指</b>在中指位。</li>
+      <li><b>大拇指</b>要折進去，放在大約<b>中指的下面</b>。</li>
       <li>這一課只講<b>左手</b>的手指，不講右手的手指。</li>
     </ul>
   </div>`;
