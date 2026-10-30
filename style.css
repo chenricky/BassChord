@@ -227,3 +227,10 @@ svg .link.dash{stroke:var(--M);stroke-width:2;stroke-dasharray:5 4;opacity:.9}
 .focusnote{background:#2a2614;border-color:#6b5d1f}
 .focusnote p{margin:6px 0 0;line-height:1.8}
 .focusnote b{color:var(--M)}
+
+/* hold lesson */
+.holdcard{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.holdfig{flex:0 1 340px;min-width:240px}
+.holdsvg{width:100%;height:auto;display:block}
+.holdlist{flex:1 1 220px;margin:0;padding-left:20px;line-height:2}
+.holdlist b{color:var(--M)}

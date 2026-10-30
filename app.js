@@ -976,7 +976,67 @@ function playDyad(d) {
   later(animClear, 1600);
 }
 
-const VIEWS = { pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
+/* ================= 持琴（怎麼拿貝斯） ================= */
+// 鳥瞰圖：小圓點是頭，外圈是身體；較長的手臂是左手（握住琴頸），較短的手臂是右手（壓住琴身）
+function holdPostureSVG() {
+  return `<svg class="holdsvg" viewBox="0 0 360 310" role="img" aria-label="鳥瞰圖：貝斯與身體的位置">
+    <line x1="194" y1="204" x2="134" y2="64" stroke="#4cc38a" stroke-width="16" stroke-linecap="round"/>
+    <circle cx="196" cy="206" r="12" fill="#2f9d6c"/>
+    <circle cx="160" cy="228" r="34" fill="none" stroke="#4cc38a" stroke-width="8" opacity=".55"/>
+    <circle cx="160" cy="228" r="9" fill="#4cc38a"/>
+    <path d="M128 224 C74 222 78 138 124 98" fill="none" stroke="#4cc38a" stroke-width="6" stroke-linecap="round" opacity=".5"/>
+    <path d="M190 236 C206 236 210 224 202 212" fill="none" stroke="#4cc38a" stroke-width="6" stroke-linecap="round" opacity=".5"/>
+    <g fill="var(--text)" font-size="15" font-weight="700">
+      <text x="150" y="40">Bass</text>
+      <text x="30" y="150">左手</text><text x="30" y="170" font-size="12" font-weight="400" fill="var(--dim)">握住琴頸</text>
+      <text x="236" y="222">右手</text><text x="236" y="242" font-size="12" font-weight="400" fill="var(--dim)">壓住琴身</text>
+      <text x="62" y="296">身體</text><text x="172" y="296">頭</text>
+    </g>
+    <g stroke="var(--dim)" stroke-width="1.6" fill="none" stroke-linecap="round">
+      <path d="M146 44 L138 56"/>
+      <path d="M62 150 L74 150"/><path d="M232 218 L214 214"/>
+      <path d="M88 280 L134 252"/><path d="M168 280 L162 248"/>
+    </g>
+  </svg>`;
+}
+function holdHandSVG() {
+  const f = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#e8a54b" stroke-width="26" stroke-linecap="round"/>`;
+  return `<svg class="holdsvg" viewBox="0 0 340 270" role="img" aria-label="左手的手指：食、中、無、小與大拇指">
+    <rect x="130" y="150" width="120" height="76" rx="34" fill="#e8a54b"/>
+    <ellipse cx="116" cy="204" rx="44" ry="26" transform="rotate(-32 116 204)" fill="#e8a54b"/>
+    ${f(150, 168, 96, 94)}${f(182, 160, 182, 62)}${f(214, 166, 244, 84)}${f(236, 188, 282, 136)}
+    <g fill="var(--text)" font-size="17" font-weight="700" text-anchor="middle">
+      <text x="78" y="78">食</text><text x="182" y="40">中</text><text x="256" y="68">無</text><text x="304" y="128">小</text>
+    </g>
+    <g fill="var(--text)" text-anchor="middle"><text x="116" y="252" font-size="15" font-weight="700">大拇指（在中指位）</text></g>
+  </svg>`;
+}
+function viewHold() {
+  return `
+  <h2>持琴：怎麼拿貝斯</h2>
+  <p class="sub">這一課看兩件事：貝斯和身體的位置，還有左手的手指。</p>
+  <h3>貝斯和身體的位置（鳥瞰圖）</h3>
+  <div class="card holdcard">
+    <div class="holdfig">${holdPostureSVG()}</div>
+    <ul class="holdlist">
+      <li>這張是<b>鳥瞰圖</b>，從上往下看：小圓點是<b>頭</b>，外面的圓圈是<b>身體</b>。</li>
+      <li>貝斯（Bass）的琴頸在左邊。</li>
+      <li><b>左手</b>（較長的手臂）：握住琴頸。</li>
+      <li><b>右手</b>（較短的手臂）：壓住琴身。</li>
+    </ul>
+  </div>
+  <h3>左手的手指</h3>
+  <div class="card holdcard">
+    <div class="holdfig">${holdHandSVG()}</div>
+    <ul class="holdlist">
+      <li><b>食</b>＝食指，<b>中</b>＝中指，<b>無</b>＝無名指，<b>小</b>＝小指。</li>
+      <li><b>大拇指</b>在中指位。</li>
+      <li>這一課只講<b>左手</b>的手指，不講右手的手指。</li>
+    </ul>
+  </div>`;
+}
+
+const VIEWS = { hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
 const $ = s => document.querySelector(s);
 
 function render() {
