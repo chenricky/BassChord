@@ -210,3 +210,9 @@ svg .dot.nat+.lbl{opacity:1;fill:#7b8491;font-weight:500}
   .tri td.small{font-size:11px}
 }
 .distnote{line-height:1.7;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}.distnote b{color:var(--text)}
+
+/* chords lesson 2 */
+svg .link{stroke:#4a525e;stroke-width:1.4;opacity:.7}
+svg .link.on{stroke:#fff;stroke-width:3;opacity:.95}
+.lesson2rules{line-height:1.8}
+.lesson2rules b{color:var(--text)}

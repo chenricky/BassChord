@@ -86,6 +86,7 @@ const store = {
 };
 const state = {
   tab: store.get('tab', 'pitch'),
+  lesson: store.get('lesson', 1),
   key: store.get('key', 'C'),
   deg: 0,
   cover: { notes: false, mn: false, q: false },
@@ -219,6 +220,9 @@ function boardSVG(o) {
       if (t !== '') h += `<text class="fn ${o.fretStrong && o.fretStrong.includes(f) ? 'fnb' : ''}" x="${L - 18}" y="${ry(f) + ch / 2 + 4}">${t}</text>`;
     }
   }
+  (o.links || []).forEach(l => {
+    h += `<line class="link ${l.cls || ''}" x1="${sx(l.a.s)}" y1="${ry(l.a.f) + ch / 2}" x2="${sx(l.b.s)}" y2="${ry(l.b.f) + ch / 2}"/>`;
+  });
   if (o.click) {
     for (let f = o.from; f <= o.to; f++) {
       h += `<rect class="hit" data-act="tap" data-fret="${f}" x="${sx(1) - cw / 2}" y="${ry(f)}" width="${cw}" height="${ch}"/>`;
@@ -279,7 +283,7 @@ function viewPitch() {
 // 距離：根音、三音、五音的距離（大和弦一種，小和弦與減和弦各兩種指型）
 const DIST = { M: ['0-1-2'], m: ['0-2-2', '0-3-2'], d: ['0-2-1', '0-3-1'] };
 
-function viewChords() {
+function viewChordsLesson1() {
   const c = state.cover;
   const cell = (col, i, html, cls = '') => {
     const hid = c[col] && !state.revealed.has(col + i);
@@ -864,6 +868,66 @@ function answer(value) {
 }
 
 /* ================= 路由與事件 ================= */
+/* ================= 三和弦：第二課（雙音彈法） ================= */
+// 根音在 E 弦；三度音在 G 弦（高八度）。兩隻手指一起彈，不是分開彈。
+//  Ⓐ 三度音：「下一弦」+「左一格」（大三度；小三度 ♭3 是「左二格」）
+//  Ⓑ 八度音：「下二弦」+「右二格」
+//  合起來：根音往下三弦、往右一格就是大三度（小三度不動格）。
+function dyadOf(d) {
+  const n = ((d.pc - 4 + 12) % 12) || 12, t = n + (d.q === 'M' ? 1 : 0);
+  return { n, t, third: d.notes[1], lbl: d.q === 'M' ? '3' : '♭3' };
+}
+function lessonTabs() {
+  const tab = (n, name) => `<button class="chip ${state.lesson === n ? 'on' : ''}" data-act="lesson" data-n="${n}">${name}</button>`;
+  return `<div class="chips">${tab(1, '第一課　順階和弦')}${tab(2, '第二課　雙音彈法')}</div>`;
+}
+function viewChords() {
+  return lessonTabs() + (state.lesson === 2 ? viewChordsLesson2() : viewChordsLesson1());
+}
+function viewChordsLesson2() {
+  const sel = K.degrees[state.deg], marks = [], links = [];
+  K.degrees.forEach(d => {
+    const y = dyadOf(d), on = d.i === state.deg;
+    [0, 12].forEach(off => {
+      if (off && y.n + off > 13) return;
+      const a = { s: 0, f: y.n + off }, b = { s: 3, f: y.t + off };
+      links.push({ a, b, cls: on ? 'on' : '' });
+      marks.push({ ...a, cls: on ? 'root sel' : 'nat', label: fmtN(d.root) });
+      marks.push({ ...b, cls: on ? 't3 sel' : 'nat', label: y.lbl });
+    });
+  });
+  links.sort((p, q) => (p.cls === 'on') - (q.cls === 'on'));
+  const y = dyadOf(sel), q = Q[sel.q];
+  const chips = K.degrees.map(x => `<button class="chip ${x.i === state.deg ? 'on' : ''}" data-act="deg" data-i="${x.i}">${x.roman}</button>`).join('');
+  return `
+  <h2>三和弦練習（二）</h2>
+  <p class="sub">在 E 弦上找出 ${fmtKey(K.key)} 大調音階的音，並彈出相對應的順階和弦。這種彈法不是分開彈，而是<b>根音</b>和<b>高八度的三度音</b>用兩隻手指一起彈。</p>
+  <div class="card small lesson2rules">
+    <div><b>Ⓐ 三度音</b>有「下一弦」＋「左一格」的規則（小三度 ♭3 是「左二格」）。</div>
+    <div><b>Ⓑ 八度音</b>有「下二弦」＋「右二格」的規則。</div>
+    <div>因為 Ⓐ 和 Ⓑ，所以順階和弦的根音（R）和和弦中的三度音（高八度的三度音），在圖上就有固定的相對關係：<b>根音往下三條弦、往右一格是大三度，小三度（♭3）則是同一格。</b></div>
+  </div>
+  <div class="chips">${chips}</div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div><b class="${q.cls}">${sel.roman} · ${fmtN(sel.root)} ${q.full}</b>
+        <div class="small">根音 ${fmtN(sel.root)}：E 弦第 ${y.n} 格　＋　${y.lbl === '3' ? '三度音' : '小三度音（♭3）'} ${fmtN(y.third)}：G 弦第 ${y.t} 格　｜　兩隻手指一起彈</div></div>
+      <button class="btn" data-act="dyad">▶ 一起彈</button>
+    </div>
+    <div class="legend"><span><i style="background:var(--M)"></i>根音</span><span><i style="background:var(--m)"></i>三度音（高八度）</span></div>
+    ${boardSVG({ from: 1, to: 15, ch: 26, cw: 54, left: 52, right: 40, strNums: true, marks, links, width: 300, aria: 'E 弦根音與 G 弦三度音' })}
+  </div>`;
+}
+function playDyad(d) {
+  const y = dyadOf(d);
+  tone(fretHz(0, y.n), 0, 1.4, 0.25); tone(fretHz(3, y.t), 0, 1.4, 0.25);   // 同時彈
+  const svg = $('#view svg.board');
+  if (!svg) return;
+  animClear();
+  svg.querySelectorAll('.dot.sel').forEach(e => { void e.getBoundingClientRect(); e.classList.add('hot'); });
+  later(animClear, 1600);
+}
+
 const VIEWS = { pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
 const $ = s => document.querySelector(s);
 
@@ -901,6 +965,8 @@ function init() {
         const svg = $('#view .shapes svg.board') || $('#view svg.board');
         if (svg) animateChord(svg);
       }
+      else if (act === 'dyad') playDyad(K.degrees[state.deg]);
+      else if (act === 'lesson') { state.lesson = +a.dataset.n; store.set('lesson', state.lesson); render(); }
       else if (act === 'deg') { state.deg = +a.dataset.i; render(); }
       else if (act === 'toboard') { state.tab = 'board'; store.set('tab', 'board'); window.scrollTo(0, 0); render(); }
       else if (act === 'qtype') {
