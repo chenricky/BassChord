@@ -223,3 +223,7 @@ svg .link.on{stroke:#fff;stroke-width:3;opacity:.95}
 .why{background:#181b21;border-radius:10px;padding:6px 12px}
 .walk{line-height:1.9;margin:8px 0;padding:8px 12px;background:#181b21;border-radius:10px}
 svg .link.dash{stroke:var(--M);stroke-width:2;stroke-dasharray:5 4;opacity:.9}
+
+.focusnote{background:#2a2614;border-color:#6b5d1f}
+.focusnote p{margin:6px 0 0;line-height:1.8}
+.focusnote b{color:var(--M)}
