@@ -392,9 +392,9 @@ function viewNotes() {
       <p class="pwmsg" id="pwmsg" role="alert">${state.pwError ? '密碼不對，請再試一次。' : ''}</p>
     </form>`;
   }
-  const caps = ['音高：音名 / 簡譜 / 唱名', '三和弦：順階和弦與口訣', '三和弦練習（一）：A 弦上找出音階與和弦', '指型：大小三和弦的指法', '歌曲：Fly Me To The Moon（和弦簡化標注）'];
+  const caps = ['音高：音名 / 簡譜 / 唱名', '三和弦：順階和弦與口訣', '三和弦練習（一）：A 弦上找出音階與和弦', '指型：大小三和弦的指法', '歌曲：Fly Me To The Moon（和弦簡化標注）', '三和弦練習（二）：E 弦根音與高八度的三度音（雙音彈法）'];
   return `<div class="row" style="justify-content:space-between"><h2 style="margin:0">原始筆記</h2><button class="btn" data-act="lock">鎖上</button></div>
-  <p class="sub">App 內容整理自這 5 頁筆記。</p>
+  <p class="sub">App 內容整理自這 6 頁筆記。</p>
   <div class="gallery">${caps.map((c, i) => `<figure><img src="assets/note-${i + 1}.${i === 4 ? 'webp' : 'jpg'}" alt="${c}" loading="lazy"><figcaption>${c}</figcaption></figure>`).join('')}</div>
   <h3>更改密碼</h3>
   <form class="card pwform" id="pwchange" autocomplete="off">
