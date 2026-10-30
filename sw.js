@@ -1,6 +1,6 @@
-const CACHE = 'basschord-v3';
+const CACHE = 'basschord-v4';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.json', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png',
-  'assets/note-1.jpg', 'assets/note-2.jpg', 'assets/note-3.jpg', 'assets/note-4.jpg', 'assets/note-5.webp', 'assets/note-6.jpg'];
+  'assets/note-1.jpg', 'assets/note-2.jpg', 'assets/note-3.jpg', 'assets/note-4.jpg', 'assets/note-5.webp', 'assets/note-6.jpg', 'assets/note-7.jpg', 'assets/note-8.jpg'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
