@@ -1043,54 +1043,7 @@ function viewHold() {
   </div>`;
 }
 
-/* ================= 轉譜：數字譜 → 字母譜 ================= */
-// 使用者自己貼上數字譜，這裡只負責轉換與排版；輸入的內容只存在這台設備的瀏覽器裡。
-// 格式：一段 = 兩行（第一行音符、第二行歌詞），段與段之間空一行。
-//  音符行：數字 0–7、「-」延音、「|」小節線；高音在數字後面加「.」，低音加「,」；和弦寫在前面，例如 [C]1
-//  歌詞行：每個字對應一個音（1–7）；沒有歌詞的音用「_」
-const JP_NOTE = /^(?:\[([^\]]+)\])?([.,]?)([0-7-])([.'\u0307^,\u0323]?)_*$/;
-function jpConvert(text) {
-  const blocks = text.replace(/\r/g, '').split(/\n\s*\n/).map(b => b.split('\n').filter(l => l.trim() !== '')).filter(b => b.length);
-  const plain = [];
-  const html = blocks.map(b => {
-    const lyr = [...(b[1] || '').replace(/[\s|]/g, '')];
-    let li = 0, chord = '';
-    const cols = [], flat = [];
-    for (const tok of b[0].trim().split(/\s+/)) {
-      if (/^\|+$/.test(tok)) { cols.push(`<div class="jbar${tok.length > 1 ? ' dbl' : ''}"></div>`); flat.push('|'); continue; }
-      const only = tok.match(/^\[([^\]]+)\]$/);
-      if (only) { chord = only[1]; continue; }
-      const m = tok.match(JP_NOTE);
-      if (!m) { cols.push(`<div class="jc"><span class="jch"></span><span class="jn bad">${tok}</span><span class="jl"></span></div>`); flat.push('?'); continue; }
-      const ch = m[1] || chord; chord = '';
-      const d = m[3], hi = m[2] === '.' || /[.'\u0307^]/.test(m[4]), lo = m[2] === ',' || /[,\u0323]/.test(m[4]);
-      const letter = d === '-' ? '—' : d === '0' ? '0' : fmtN(K.scale[+d - 1]);
-      const lyric = /[1-7]/.test(d) ? (lyr[li++] || '') : '';
-      cols.push(`<div class="jc"><span class="jch">${ch}</span><span class="jn${hi ? ' hi' : ''}${lo ? ' lo' : ''}">${letter}</span><span class="jl">${lyric === '_' ? '' : lyric}</span></div>`);
-      flat.push(letter + (hi ? '\u0307' : '') + (lo ? '\u0323' : ''));
-    }
-    plain.push(flat.join(' '));
-    return `<div class="jrow">${cols.join('')}</div>`;
-  }).join('');
-  return { html: html || '<p class="small">在上面貼上數字譜，這裡會顯示字母譜。</p>', plain: plain.join('\n') };
-}
-function viewJp() {
-  const text = store.get('jp', '');
-  return `
-  <h2>轉譜：數字譜 → 字母譜</h2>
-  <p class="sub">貼上你自己的數字譜，會依目前的調（${fmtKey(K.key)} 大調：1＝${fmtN(K.scale[0])}）換成字母。內容只存在這台設備上。</p>
-  <div class="card small jphelp">
-    <b>格式</b>：一段兩行，第一行音符、第二行歌詞，段與段之間空一行。<br>
-    音符：數字 0–7，「-」延音，「|」小節線；<b>高音</b>在數字後面加 <code>.</code>，<b>低音</b>加 <code>,</code>；和弦寫在音符前面，例如 <code>[C]1</code>。<br>
-    歌詞：一個字對應一個音（1–7）；某個音沒有歌詞就寫 <code>_</code>。<br>
-    <b>範例（隨手編的）</b>：<code>[C]1 2 3 - | [F]4. 3 2 -</code>　下一行：<code>啦 啦 啦 | 啦 啦 啦</code>
-  </div>
-  <textarea id="jpin" class="jpin" rows="9" spellcheck="false" aria-label="數字譜輸入" placeholder="[C]1 2 3 - | [F]4. 3 2 -&#10;啦 啦 啦 | 啦 啦 啦">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</textarea>
-  <div class="row" style="margin:8px 0"><button class="btn" data-act="jpcopy">複製字母（只有音符）</button><button class="btn" data-act="jpclear">清除</button><span class="small" id="jpmsg"></span></div>
-  <div class="card jpout" id="jpout">${jpConvert(text).html}</div>`;
-}
-
-const VIEWS = { jp: viewJp, hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
+const VIEWS = { hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
 const $ = s => document.querySelector(s);
 
 function render() {
@@ -1127,10 +1080,6 @@ function init() {
         const svg = $('#view .shapes svg.board') || $('#view svg.board');
         if (svg) animateChord(svg);
       }
-      else if (act === 'jpcopy') {
-        const t = jpConvert(store.get('jp', '')).plain, msg = $('#jpmsg');
-        (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { if (msg) msg.textContent = '已複製'; }, () => { if (msg) msg.textContent = '這個瀏覽器不能複製，請手動選取'; });
-      } else if (act === 'jpclear') { store.set('jp', ''); render(); }
       else if (act === 'dyad') playDyad(K.degrees[state.deg]);
       else if (act === 'lesson') { state.lesson = +a.dataset.n; store.set('lesson', state.lesson); render(); }
       else if (act === 'deg') { state.deg = +a.dataset.i; render(); }
@@ -1193,11 +1142,6 @@ function init() {
       if (!v) { $('#pwchangemsg').textContent = '請先輸入新密碼。'; return; }
       pwStore.save(await sha256(v)); state.pwSaved = true; render(); state.pwSaved = false;
     }
-  });
-
-  $('#view').addEventListener('input', e => {
-    if (e.target.id !== 'jpin') return;
-    store.set('jp', e.target.value); $('#jpout').innerHTML = jpConvert(e.target.value).html;
   });
 
   $('#view').addEventListener('change', e => {

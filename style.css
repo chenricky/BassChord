@@ -234,19 +234,3 @@ svg .link.dash{stroke:var(--M);stroke-width:2;stroke-dasharray:5 4;opacity:.9}
 .holdsvg{width:100%;height:auto;display:block}
 .holdlist{flex:1 1 220px;margin:0;padding-left:20px;line-height:2}
 .holdlist b{color:var(--M)}
-
-/* 轉譜 */
-.jphelp{line-height:1.9}
-.jphelp code{background:#181b21;border-radius:6px;padding:1px 6px;color:var(--text)}
-.jpin{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:15px/1.6 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
-.jpout{overflow-x:auto}
-.jrow{display:flex;flex-wrap:wrap;align-items:flex-end;gap:2px 4px;margin:6px 0 14px}
-.jc{display:flex;flex-direction:column;align-items:center;min-width:1.9em}
-.jch{min-height:1.5em;color:var(--M);font-weight:700;font-size:15px}
-.jn{position:relative;font-size:22px;font-weight:700;line-height:1.7}
-.jn.hi::before,.jn.lo::after{content:'';position:absolute;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:currentColor}
-.jn.hi::before{top:2px}.jn.lo::after{bottom:2px}
-.jn.bad{color:var(--d)}
-.jl{min-height:1.7em;font-size:16px;color:var(--dim)}
-.jbar{align-self:stretch;width:2px;background:var(--line);margin:0 2px}
-.jbar.dbl{width:6px;border-left:2px solid var(--line);border-right:2px solid var(--line);background:none}
