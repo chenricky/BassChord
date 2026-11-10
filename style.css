@@ -239,7 +239,12 @@ svg .link.dash{stroke:var(--M);stroke-width:2;stroke-dasharray:5 4;opacity:.9}
 :root{--q7:#f2994a}
 .q7{color:var(--q7)}
 svg .dot.t7{fill:#c792ea}
-.tri7 th:nth-child(1),.tri7 td:nth-child(1){width:9%}
-.tri7 th:nth-child(2),.tri7 td:nth-child(2){width:15%}
-.tri7 th:nth-child(3),.tri7 td:nth-child(3){width:25%}
-.tri7 th:nth-child(4),.tri7 td:nth-child(4){width:13%}
+.tri7 th:nth-child(1),.tri7 td:nth-child(1){width:8%}
+.tri7 th:nth-child(2),.tri7 td:nth-child(2){width:13%}
+.tri7 th:nth-child(3),.tri7 td:nth-child(3){width:21%}
+.tri7 th:nth-child(4),.tri7 td:nth-child(4){width:12%}
+.tri7 th:nth-child(5),.tri7 td:nth-child(5){width:17%}
+
+.tblwrap{overflow-x:auto}
+.tri7 td.q,.tri7 th{white-space:nowrap}
+@media (max-width:560px){.tri7{min-width:340px}.tri7 td.small{font-size:11px}}

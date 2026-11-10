@@ -1055,6 +1055,8 @@ const SEV = {
   m7b5: { zh: '半減七', full: '半減七和弦', formula: 'R ♭3 ♭5 ♭7', cls: 'qd', alias: '半減七, Rø7, m7(♭5)', mark: 'ø7',
     pts: [{ r: 'R', s: 1, d: 0, f: 1 }, { r: '♭3', s: 1, d: 3, f: 4 }, { r: '♭5', s: 2, d: 1, f: 2 }, { r: '♭7', s: 3, d: 0, f: 0 }] },
 };
+// 距離：依音高由低到高（根音、第二個音、第三個音、第四個音），每個音和根音相距的格數
+const sevDist = sv => sv.pts.map(p => ({ semi: (p.s - 1) * 5 + p.d, g: Math.abs(p.d) })).sort((a, b) => a.semi - b.semi).map(x => x.g).join('-');
 const SEV_Q = ['maj7', 'm7', 'm7', 'maj7', 'dom7', 'm7', 'm7b5'];   // 大調順階七和弦：Ⅰ到Ⅶ
 const CIRC = ['①', '②', '③', '④'];
 const ptCls7 = r => (r === 'R' ? 'root' : r.endsWith('3') ? 't3' : r.endsWith('5') ? 't5' : 't7');
@@ -1077,6 +1079,7 @@ function viewSeventh() {
       <td class="nt">${fmtN(sevSym(d))}</td>
       ${cell('notes', d.i, `<span class="nt">${sevNotes(d).map(fmtN).join(' ')}</span>`)}
       ${cell('q', d.i, sv.zh, 'q ' + sv.cls)}
+      <td class="dist"><span class="nw">${sevDist(sv)}</span></td>
       <td class="small nw">${sv.formula}</td>
     </tr>`;
   }).join('');
@@ -1089,11 +1092,12 @@ function viewSeventh() {
     <label><input type="checkbox" data-cover="notes" ${c.notes ? 'checked' : ''}>和弦音</label>
     <label><input type="checkbox" data-cover="q" ${c.q ? 'checked' : ''}>類型</label>
   </div>
-  <div class="card"><table class="tri tri7">
-    <thead><tr><th>級數</th><th>和弦</th><th>和弦音</th><th style="text-align:center">類型</th><th>公式</th></tr></thead>
+  <div class="card"><div class="tblwrap"><table class="tri tri7">
+    <thead><tr><th>級數</th><th>和弦</th><th>和弦音</th><th style="text-align:center">類型</th><th>距離</th><th>公式</th></tr></thead>
     <tbody>${rows}</tbody>
-  </table>
-  <p class="small">大七 · 小七 · 小七 · 大七 · 屬七 · 小七 · 半減七 —— 每個大調都一樣。</p></div>
+  </table></div>
+  <p class="small">大七 · 小七 · 小七 · 大七 · 屬七 · 小七 · 半減七 —— 每個大調都一樣。</p>
+  <p class="small distnote"><b>距離</b>：數字代表每個音之間大致相距的格數，是大致的相對關係，是幫助記憶的方法。四個數字依序是根音、第二個音、第三個音、第四個音，每個數字是這個音和根音相距的格數，根音是 0。例如大七 0-1-2-1：三度比根音低 1 格、五度高 2 格、七度高 1 格；小七 0-3-2-0：第二個音（♭3）和根音在同一條弦上相距 3 格，最後一個音（♭7）和根音在同一格。</p></div>
   <div class="card">
     <div class="row" style="justify-content:space-between">
       <div><h2 style="margin:0">${d.roman} · <span class="${sv.cls}">${fmtN(d.root)} ${sv.full}</span></h2>
