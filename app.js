@@ -397,6 +397,7 @@ function viewNotes() {
     ['note-4.jpg', '指型：大小三和弦的指法'], ['note-5.webp', '歌曲：Fly Me To The Moon（和弦簡化標注）'],
     ['note-6.jpg', '三和弦練習（二）：E 弦根音與高八度的三度音（雙音彈法）'],
     ['note-7.jpg', '持琴：鳥瞰圖（貝斯和身體的位置）'], ['note-8.jpg', '持琴：左手的手指（大拇指在中指位）'],
+    ['note-9.jpg', '七和弦：大調順階七和弦'], ['note-10.jpg', '七和弦指型：大七、小七、屬七、半減七'],
   ];
   return `<div class="row" style="justify-content:space-between"><h2 style="margin:0">原始筆記</h2><button class="btn" data-act="lock">鎖上</button></div>
   <p class="sub">App 內容整理自這 ${notes.length} 頁筆記。</p>
