@@ -1043,7 +1043,86 @@ function viewHold() {
   </div>`;
 }
 
-const VIEWS = { hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
+/* ================= 七和弦 ================= */
+// 指型：根音在 A 弦。s=弦(1=A,2=D,3=G) d=相對根音的格數 f=手指(食1 中2 無3 小4，0＝筆記上沒標)
+const SEV = {
+  maj7: { zh: '大七', full: '大七和弦', formula: 'R 3 5 7', cls: 'qM', alias: 'major7, maj7, M7', mark: 'Δ7',
+    pts: [{ r: 'R', s: 1, d: 0, f: 2 }, { r: '3', s: 2, d: -1, f: 1 }, { r: '5', s: 2, d: 2, f: 4 }, { r: '7', s: 3, d: 1, f: 3 }] },
+  m7: { zh: '小七', full: '小七和弦', formula: 'R ♭3 5 ♭7', cls: 'qm', alias: 'minor7, mi7, m7, R-7', mark: '-7',
+    pts: [{ r: 'R', s: 1, d: 0, f: 1 }, { r: '♭3', s: 1, d: 3, f: 4 }, { r: '5', s: 2, d: 2, f: 3 }, { r: '♭7', s: 3, d: 0, f: 1 }] },
+  dom7: { zh: '屬七', full: '屬七和弦', formula: 'R 3 5 ♭7', cls: 'q7', alias: 'Dominant7, 屬七, R7', mark: '7',
+    pts: [{ r: 'R', s: 1, d: 0, f: 2 }, { r: '3', s: 2, d: -1, f: 1 }, { r: '5', s: 2, d: 2, f: 4 }, { r: '♭7', s: 3, d: 0, f: 0 }] },
+  m7b5: { zh: '半減七', full: '半減七和弦', formula: 'R ♭3 ♭5 ♭7', cls: 'qd', alias: '半減七, Rø7, m7(♭5)', mark: 'ø7',
+    pts: [{ r: 'R', s: 1, d: 0, f: 1 }, { r: '♭3', s: 1, d: 3, f: 4 }, { r: '♭5', s: 2, d: 1, f: 2 }, { r: '♭7', s: 3, d: 0, f: 0 }] },
+};
+const SEV_Q = ['maj7', 'm7', 'm7', 'maj7', 'dom7', 'm7', 'm7b5'];   // 大調順階七和弦：Ⅰ到Ⅶ
+const CIRC = ['①', '②', '③', '④'];
+const ptCls7 = r => (r === 'R' ? 'root' : r.endsWith('3') ? 't3' : r.endsWith('5') ? 't5' : 't7');
+const sevNotes = d => [0, 2, 4, 6].map(k => K.scale[(d.i + k) % 7]);
+const sevSym = d => d.root + SEV[SEV_Q[d.i]].mark;
+function sevMarks(d) {
+  const sv = SEV[SEV_Q[d.i]], ord = pitchOrder(d, sv.pts);
+  return sv.pts.map((p, i) => ({ s: p.s, f: d.fret + p.d, cls: ptCls7(p.r), label: p.r, ord: ord[i], tag: `${CIRC[ord[i]]}${p.f ? ' ' + FINGER[p.f] : ''}` }));
+}
+function viewSeventh() {
+  const c = state.cover;
+  const cell = (col, i, html, cls = '') => {
+    const hid = c[col] && !state.revealed.has(col + i);
+    return `<td class="${cls} ${hid ? 'covered-cell' : ''}" data-col="${col}" data-i="${i}"><span class="${hid ? 'covered' : ''}">${html}</span></td>`;
+  };
+  const rows = K.degrees.map(d => {
+    const sv = SEV[SEV_Q[d.i]];
+    return `<tr data-i="${d.i}" class="${d.i === state.deg ? 'sel' : ''}">
+      <td class="rn">${d.roman}</td>
+      <td class="nt">${fmtN(sevSym(d))}</td>
+      ${cell('notes', d.i, `<span class="nt">${sevNotes(d).map(fmtN).join(' ')}</span>`)}
+      ${cell('q', d.i, sv.zh, 'q ' + sv.cls)}
+      <td class="small nw">${sv.formula}</td>
+    </tr>`;
+  }).join('');
+  const d = K.degrees[state.deg], sv = SEV[SEV_Q[d.i]];
+  const to = d.fret + 3, from = d.fret - 2;
+  return `
+  <h2>${fmtKey(K.key)} 大調順階七和弦</h2>
+  <p class="sub">以大調音階為材料，由 3 度＋3 度＋3 度堆疊出的和弦（R 3 5 7）。</p>
+  <div class="cover-opts">遮住自我測試：
+    <label><input type="checkbox" data-cover="notes" ${c.notes ? 'checked' : ''}>和弦音</label>
+    <label><input type="checkbox" data-cover="q" ${c.q ? 'checked' : ''}>類型</label>
+  </div>
+  <div class="card"><table class="tri tri7">
+    <thead><tr><th>級數</th><th>和弦</th><th>和弦音</th><th style="text-align:center">類型</th><th>公式</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p class="small">大七 · 小七 · 小七 · 大七 · 屬七 · 小七 · 半減七 —— 每個大調都一樣。</p></div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div><h2 style="margin:0">${d.roman} · <span class="${sv.cls}">${fmtN(d.root)} ${sv.full}</span></h2>
+        <div class="small">${sevNotes(d).map(fmtN).join(' ')} ｜ ${sv.formula} ｜ ${fmtN(sevSym(d))}</div>
+        <div class="small">${sv.alias}</div></div>
+      <button class="btn" data-act="play7">▶ 試聽</button>
+    </div>
+    <p class="small">A 弦第 ${d.fret} 格為根音（R）。圈起來的數字是彈奏順序：① 根音、② 三度、③ 五度、④ 七度。手指：食＝食指、中＝中指、無＝無名指、小＝小指。</p>
+    <div class="shapes"><div class="shape"><h4>${sv.zh}指型</h4>${boardSVG({ from, to, marks: sevMarks(d), width: 210, right: 46, anim: true, aria: '七和弦指型' })}</div></div>
+  </div>`;
+}
+function playChord7(d) {
+  const sv = SEV[SEV_Q[d.i]];
+  sv.pts.map(p => fretHz(p.s, d.fret + p.d)).sort((a, b) => a - b).forEach((hz, i) => { tone(hz, i * 0.4, 0.8); tone(hz, 1.8, 1.4, 0.12); });
+  const svg = $('#view .shapes svg.board');
+  if (!svg) return;
+  const dots = chordDots(svg);
+  animClear();
+  dots.forEach((dt, i) => later(() => focusDot(svg, dt, dots[i - 1], 300), i * 400));
+  later(() => {
+    svg.querySelectorAll('.trail').forEach(t => t.remove());
+    const ring = svg.querySelector('.ring'); if (ring) ring.style.opacity = 0;
+    svg.querySelectorAll('.dot.hot').forEach(e => e.classList.remove('hot'));
+    dots.forEach(dt => { void dt.getBoundingClientRect(); dt.classList.add('hot'); });
+  }, 1800);
+  later(animClear, 3300);
+}
+
+const VIEWS = { seventh: viewSeventh, hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
 const $ = s => document.querySelector(s);
 
 function render() {
@@ -1081,6 +1160,7 @@ function init() {
         if (svg) animateChord(svg);
       }
       else if (act === 'dyad') playDyad(K.degrees[state.deg]);
+      else if (act === 'play7') playChord7(K.degrees[state.deg]);
       else if (act === 'lesson') { state.lesson = +a.dataset.n; store.set('lesson', state.lesson); render(); }
       else if (act === 'deg') { state.deg = +a.dataset.i; render(); }
       else if (act === 'toboard') { state.tab = 'board'; store.set('tab', 'board'); window.scrollTo(0, 0); render(); }

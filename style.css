@@ -234,3 +234,12 @@ svg .link.dash{stroke:var(--M);stroke-width:2;stroke-dasharray:5 4;opacity:.9}
 .holdsvg{width:100%;height:auto;display:block}
 .holdlist{flex:1 1 220px;margin:0;padding-left:20px;line-height:2}
 .holdlist b{color:var(--M)}
+
+/* 七和弦 */
+:root{--q7:#f2994a}
+.q7{color:var(--q7)}
+svg .dot.t7{fill:#c792ea}
+.tri7 th:nth-child(1),.tri7 td:nth-child(1){width:9%}
+.tri7 th:nth-child(2),.tri7 td:nth-child(2){width:15%}
+.tri7 th:nth-child(3),.tri7 td:nth-child(3){width:25%}
+.tri7 th:nth-child(4),.tri7 td:nth-child(4){width:13%}
