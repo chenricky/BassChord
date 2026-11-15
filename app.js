@@ -593,6 +593,9 @@ const isSongTab = () => state.tab === 'song' || state.tab === 'song7';
 const noteLabel = (b, covered) => `<i class="bc ${BEAT_ROLE[b.role]}"><span class="${covered ? 'covered' : ''}">${fmtN(b.note)}</span></i>`;
 
 // 歌曲七和弦頁的「指法與格數」說明：各類型的手指與格數，以及本曲更正過的和弦實際的位置
+// 歌曲七和弦：某個和弦「實際彈的那幾個音」的距離（一個和弦的小節 4 個數字，兩個和弦的小節各 2 個）
+const songDist7 = (c, played) => sevDist(SEV[c.q]).split('-').slice(0, played).join('-');
+
 function songGuide7() {
   const rel = p => ['同一條弦', '下一弦', '下二弦'][p.s - 1];
   const fret = d => (d === 0 ? '同一格' : d > 0 ? `n＋${d} 格` : `n－${-d} 格`);
@@ -625,7 +628,8 @@ function viewSong() {
     if (bar.sec !== lastSec) { grid += `<div class="secname">${bar.sec} 段</div>`; lastSec = bar.sec; }
     const hide = sg.cover && !sg.revealed.has(i);
     const syms = bar.chords.map(c => `<span class="cs ${c.qcls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join('');
-    const quals = bar.chords.map(c => `<span class="${c.qcls}">${c.qzh}</span>`).join('<span class="small"> / </span>');
+    const played = bar.chords.length > 1 ? 2 : 4;
+    const quals = bar.chords.map(c => `<span class="${c.qcls}">${c.qzh}</span>${sg.mode === 'seventh' ? ` <span class="dist7">${songDist7(c, played)}</span>` : ''}`).join('<span class="small"> / </span>');
     grid += `<button class="bar ${i === sg.sel ? 'sel' : ''} ${i < sg.from || i > hi ? 'out' : ''}" data-act="songbar" data-bar="${i}">
       <span class="bn">${bar.n}</span><span class="syms">${syms}</span>
       <span class="ql ${hide ? 'covered' : ''}">${quals}</span>
@@ -689,7 +693,7 @@ function songPanelInner(bi) {
     pos.set(id, m);
   });
   // 和弦名稱旁標出「大和弦／小和弦／減和弦」；一小節兩個和弦時，播放中會讓目前這個亮起
-  const syms = bar.chords.map((c, ci) => `<span class="npc" data-ci="${ci}"><span class="cs ${c.qcls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span><span class="npq ${c.qcls}">${c.qfull}</span></span>`).join('');
+  const syms = bar.chords.map((c, ci) => `<span class="npc" data-ci="${ci}"><span class="cs ${c.qcls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span><span class="npq ${c.qcls}">${c.qfull}</span>${state.song.mode === 'seventh' ? `<span class="npd">距離 ${songDist7(c, bar.chords.length > 1 ? 2 : 4)}</span>` : ''}</span>`).join('');
   // 音塊的高低依「絕對音高」排列：整首歌最低的音在最下面，最高的音在最上面
   const semi = b => 12 * Math.log2(songBeatHz(b) / OPEN_HZ[0]);
   const all = curPlan().flatMap(x => x.beats.map(semi)), lo = Math.min(...all), hi = Math.max(...all);

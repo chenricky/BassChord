@@ -257,3 +257,7 @@ svg .dot.t7{fill:#c792ea}
 .guide7 ul{margin:4px 0 8px;padding-left:20px}
 .guide7 b{color:var(--text)}
 .guide7 b.qM{color:var(--M)}.guide7 b.qm{color:var(--m)}.guide7 b.q7{color:var(--q7)}.guide7 b.qd{color:var(--d)}
+
+/* 歌曲七和弦：距離 */
+.dist7{margin-left:4px;color:var(--dim);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.npd{margin-left:8px;color:var(--dim);font-size:14px;font-variant-numeric:tabular-nums;letter-spacing:.04em;white-space:nowrap}
