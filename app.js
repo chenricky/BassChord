@@ -460,7 +460,9 @@ function parseChord(raw) {
 function parseChord7(raw) {
   const sym = raw.replace(/^\*/, ''), m = sym.match(/^([A-G][#b♯♭]?)(.*)$/);
   const root = m[1].replace('♯', '#').replace('♭', 'b'), rest = m[2];
-  const q = rest.includes('Δ') ? 'maj7' : rest.includes('ø') ? 'm7b5' : rest.includes('-') ? 'm7' : 'dom7';
+  // 例外（依你的指定）：E7♭9 彈小七，A7 彈大七
+  const SEV_OVERRIDE = { 'E7♭9': 'm7', 'A7': 'maj7' };
+  const q = SEV_OVERRIDE[sym] || (rest.includes('Δ') ? 'maj7' : rest.includes('ø') ? 'm7b5' : rest.includes('-') ? 'm7' : 'dom7');
   const sv = SEV[q];
   return {
     sym, hl: false, root, q, pc: pcOfName(root), qzh: sv.zh, qfull: sv.full, qcls: sv.cls,
@@ -609,7 +611,7 @@ function viewSong() {
     </button>`;
   });
   const seventh = sg.mode === 'seventh';
-  const rules7 = `<b>七和弦規則</b>：看和弦符號——有 Δ 是<b class="qM">大七</b>，有 -7 是<b class="qm">小七</b>，有 ø 是<b class="qd">半減七</b>，其餘的 7（含 7♭9）是<b class="q7">屬七</b>。<br>
+  const rules7 = `<b>七和弦規則</b>：看和弦符號——有 Δ 是<b class="qM">大七</b>，有 -7 是<b class="qm">小七</b>，有 ø 是<b class="qd">半減七</b>，其餘的 7（G7、F7）是<b class="q7">屬七</b>。例外：<b>E7♭9 彈<span class="qm">小七</span>，A7 彈<span class="qM">大七</span></b>。<br>
     一個和弦的小節：依序彈 <i class="bc r">根音</i><i class="bc t">三度</i><i class="bc f">五度</i><i class="bc x">七度</i>，剛好四拍。<br>
     兩個和弦的小節：每個和弦只彈 <i class="bc r">根音</i><i class="bc t">三度</i>。<br>指型和手指跟「七和弦」頁一樣：食＝食指、中＝中指、無＝無名指、小＝小指（指型比較寬，用到第 10 格）。`;
   return `
