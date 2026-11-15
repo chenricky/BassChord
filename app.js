@@ -1260,7 +1260,7 @@ function viewDist() {
       <div class="small distcalc"><div class="chips2">${coords}</div>${calc}</div></div>
   </div>
   <h3>距離表（每個音程有固定的座標）</h3>
-  <div class="card"><div class="tblwrap"><table class="dtable">${head}${body}</table></div>
+  <div class="card"><p class="small distnote2">「下一弦」「下二弦」是演奏者抱著貝斯時的說法：E 弦在最上面，往下依序是 A、D、G。下面的表格是照指板圖的畫法，E 弦在最下面，所以下一弦會畫在同一條弦的上面。</p><div class="tblwrap"><table class="dtable">${head}${body}</table></div>
     <p class="small">這張表是把上面的指板圖<b>逆時針轉 90 度</b>：琴頭在左、琴橋在右，橫排是格差；同一條弦在最下面，往上依序是下一弦、下二弦，直排是弦差。格子裡大字是音程，小字是座標。目前選的和弦用顏色標出來。</p>
     <p class="small"><b>5 的規則</b>：相鄰兩條弦差 5 個半音，一格是 1 個半音，所以<b>半音數 ＝ 5 × 弦差 ＋ 格差</b>。每一排的音程都是連續的：下一弦那排從左到右是 ♭3、3、4、♭5、5；下二弦那排是 ♭6、6、♭7、7、八度。</p></div>
   <h3>同一個音的兩種寫法</h3>

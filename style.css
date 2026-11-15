@@ -300,3 +300,5 @@ svg .dot.t7{fill:#c792ea}
 
 .dtable th.axis{text-align:left;color:var(--dim);font-size:12px;border-bottom:1px solid var(--line)}
 .dtable th.axis.r{text-align:right}
+
+.distnote2{margin:0 0 12px;padding:10px 12px;background:#181b21;border-radius:10px;line-height:1.8}
