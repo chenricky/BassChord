@@ -1230,7 +1230,7 @@ function viewDist() {
     return `<td class="dcell${cls}"><b>${IVL[sem] || sem}</b><small>${dcode(r, f)}</small></td>`;
   }).join('')}</tr>`).join('');
   // 選中的和弦：座標、半音算式、小指板
-  const coords = dk.pts.map((p, i) => `<span class="dchip ${ptCls7(dk.roles[i])}">${dk.roles[i]}<b>${dcode(p[0], p[1])}</b></span>`).join('');
+  const coords = dk.pts.map((p, i) => `<span class="dchip ${ptCls7(dk.roles[i])}"><i>${dk.roles[i]}</i><b>${dcode(p[0], p[1])}</b></span>`).join('');
   const calc = dk.pts.map((p, i) => {
     const sem = 5 * p[0] + p[1];
     const expr = p[0] === 0 ? `${p[1]}` : `5×${p[0]} ${p[1] >= 0 ? '＋' : '－'} ${Math.abs(p[1])}`;
@@ -1239,7 +1239,7 @@ function viewDist() {
   const marks = dk.pts.map((p, i) => ({ s: p[0], f: 3 + p[1], cls: ptCls7(dk.roles[i]), label: dk.roles[i], tag: dcode(p[0], p[1]) }));
   const board = boardSVG({ from: 1, to: 7, ch: 34, cw: 56, left: 50, right: 40, strNames: ['同弦', '下一弦', '下二弦', '下三弦'], marks,
     fretLabel: f => ['n−2', 'n−1', 'n', 'n＋1', 'n＋2', 'n＋3', 'n＋4'][f - 1], fretStrong: [3], width: 300, aria: '距離座標示意圖' });
-  const all = Object.keys(DK).map(k => `<tr><td class="${DK[k].cls} nw"><b>${DK[k].name}</b></td><td>${DK[k].pts.map((p, i) => `<span class="dchip ${ptCls7(DK[k].roles[i])}">${dcode(p[0], p[1])}</span>`).join(' ')}</td></tr>`).join('');
+  const all = Object.keys(DK).map(k => `<tr><td class="${DK[k].cls} nw"><b>${DK[k].name}</b></td><td>${DK[k].pts.map((p, i) => `<span class="dchip ${ptCls7(DK[k].roles[i])}"><i>${DK[k].roles[i]}</i><b>${dcode(p[0], p[1])}</b></span>`).join(' ')}</td></tr>`).join('');
   return `
   <h2>距離：用位置的差距記和弦</h2>
   <p class="sub">每個音用「弦差＋格差」表示它相對根音的位置。這是幫助記憶的方法。</p>
@@ -1253,7 +1253,7 @@ function viewDist() {
   <h3>選一個和弦看看</h3>
   ${groups}
   <div class="card">
-    <h2 style="margin:0 0 6px"><span class="${dk.cls}">${dk.name}</span>　<span class="dcode">${dk.pts.map(p => dcode(p[0], p[1])).join('　')}</span></h2>
+    <h2 style="margin:0 0 6px"><span class="${dk.cls}">${dk.name}</span>　<span class="dstacks">${dk.pts.map((p, i) => `<span class="dstack"><i>${dk.roles[i]}</i><b>${dcode(p[0], p[1])}</b></span>`).join('')}</span></h2>
     <div class="distcols"><div class="distfig">${board}</div>
       <div class="small distcalc"><div class="chips2">${coords}</div>${calc}</div></div>
   </div>

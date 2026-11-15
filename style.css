@@ -285,3 +285,15 @@ svg .dot.t7{fill:#c792ea}
 .dall{width:100%;border-collapse:collapse}
 .dall td{padding:8px 6px;border-top:1px solid var(--line)}
 .dall tr:first-child td{border-top:0}
+
+/* 距離：音名（R、3、5、7）放在座標上面，不在同一行 */
+.chips2 .dchip{flex-direction:column;align-items:center;gap:0;border-radius:14px;padding:4px 14px;line-height:1.35;min-width:56px}
+.chips2 .dchip i{font-style:normal;font-size:13px;font-weight:600}
+.chips2 .dchip b{font-size:17px}
+
+.dstacks{display:inline-flex;gap:18px;vertical-align:middle;margin-left:10px}
+.dstack{display:inline-flex;flex-direction:column;align-items:center;line-height:1.3}
+.dstack i{font-style:normal;font-size:13px;color:var(--dim);font-weight:600}
+.dstack b{font-size:20px;letter-spacing:.04em}
+.dall .dchip{flex-direction:column;align-items:center;gap:0;border-radius:14px;padding:3px 12px;line-height:1.3;min-width:50px}
+.dall .dchip i{font-style:normal;font-size:12px;font-weight:600}
