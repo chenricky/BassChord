@@ -248,3 +248,7 @@ svg .dot.t7{fill:#c792ea}
 .tblwrap{overflow-x:auto}
 .tri7 td.q,.tri7 th{white-space:nowrap}
 @media (max-width:560px){.tri7{min-width:340px}.tri7 td.small{font-size:11px}}
+
+/* 歌曲七和弦：七度的顏色 */
+.bc.x,.npb.x{background:#c792ea;color:#14161a}
+.rules b.q7{color:var(--q7)}

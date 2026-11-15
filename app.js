@@ -433,7 +433,8 @@ const SONGS = [{
 }];
 
 const TRIAD_SEMI = { M: [0, 4, 7], m: [0, 3, 7], d: [0, 3, 6] };
-const BEAT_ROLE = { R: 'r', 3: 't', 5: 'f', '→': 'a' };
+const BEAT_ROLE = { R: 'r', 3: 't', 5: 'f', 7: 'x', '→': 'a' };
+const SEV_SEMI = { maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10], dom7: [0, 4, 7, 10], m7b5: [0, 3, 6, 10] };
 
 function spellTone(root, step, semis) {
   const li = (LET.indexOf(root[0]) + step) % 7, pc = (pcOfName(root) + semis) % 12;
@@ -449,13 +450,38 @@ function parseChord(raw) {
   const q = rest.includes('-') ? 'm' : rest.includes('ø') ? 'd' : 'M';
   const pc = pcOfName(root), f = (((pc - 9) % 12) + 12) % 12;
   return {
-    sym, hl, root, q, pc, fret: f < 3 ? f + 12 : f,
+    sym, hl, root, q, pc, fret: f < 3 ? f + 12 : f, qzh: Q[q].zh, qfull: Q[q].full, qcls: Q[q].cls,
     notes: [0, 2, 4].map((st, i) => spellTone(root, st, TRIAD_SEMI[q][i])),
     rule: q === 'm' ? `「${sym}」有「-」→ 小和弦` : q === 'd' ? `「${sym}」有「ø」→ 減和弦` : `「${sym}」沒有「-」→ 大和弦`,
   };
 }
 
-function planSong(song) {
+// 七和弦版：符號有 Δ＝大七、ø＝半減七、-＝小七，其餘的 7（含 7♭9）＝屬七
+function parseChord7(raw) {
+  const sym = raw.replace(/^\*/, ''), m = sym.match(/^([A-G][#b♯♭]?)(.*)$/);
+  const root = m[1].replace('♯', '#').replace('♭', 'b'), rest = m[2];
+  const q = rest.includes('Δ') ? 'maj7' : rest.includes('ø') ? 'm7b5' : rest.includes('-') ? 'm7' : 'dom7';
+  const sv = SEV[q];
+  return {
+    sym, hl: false, root, q, pc: pcOfName(root), qzh: sv.zh, qfull: sv.full, qcls: sv.cls,
+    notes: [0, 2, 4, 6].map((st, i) => spellTone(root, st, SEV_SEMI[q][i])),
+  };
+}
+
+function planSong(song, mode = 'triad') {
+  if (mode === 'seventh') {
+    const bars7 = song.sections.flatMap(s => s.bars.map(b => ({ sec: s.name, chords: b.map(parseChord7) })));
+    bars7.forEach((bar, n) => { bar.n = n + 1; });
+    assignShapes(bars7);
+    const roles = ['R', '3', '5', '7'];
+    const beat7 = (c, k) => ({ note: c.notes[k], role: roles[k], s: c.pos.pts[k].s, f: c.pos.pts[k].f, fin: c.pos.pts[k].fin });
+    bars7.forEach(bar => {
+      const [c0, c1] = bar.chords;
+      // 一個和弦：根音、三度、五度、七度各一拍；兩個和弦：各彈根音和三度
+      bar.beats = c1 ? [beat7(c0, 0), beat7(c0, 1), beat7(c1, 0), beat7(c1, 1)] : [0, 1, 2, 3].map(k => beat7(c0, k));
+    });
+    return bars7;
+  }
   const key = buildKey(song.key);
   const bars = song.sections.flatMap(s => s.bars.map(b => ({ sec: s.name, chords: b.map(parseChord) })));
   bars.forEach((bar, n) => { bar.n = n + 1; });
@@ -479,7 +505,7 @@ function planSong(song) {
     let best = null;
     OPEN_PC.forEach((o, s2) => {
       const f = (prevPc - o + 12) % 12;
-      if (f < 1 || f > FRET_MAX) return;
+      if (f < 1 || f > fretMax()) return;
       const cost = dist({ s: s2, f }, nr) + 0.5 * dist({ s: s2, f }, last);
       if (!best || cost < best.cost) best = { s: s2, f, cost };
     });
@@ -491,16 +517,27 @@ function planSong(song) {
 // 三和弦頁教的指型（大 / 小 / 減），根音在最低的那條弦，三音、五音在上一條弦。
 // 只用第 1–8 格、不用空弦：每個和弦找出所有放得下的位置，整首歌一起挑「手移動最少」的組合。
 const OPEN_PC = [4, 9, 2, 7]; // E A D G
-const FRET_MAX = 8;
+// 三和弦版用第 1–8 格；七和弦的指型比較寬，用第 1–10 格
+const fretMax = () => (state.song.mode === 'seventh' ? 10 : 8);
 function chordSpots(c) {
-  const out = [];
+  const out = [], sev = SEV[c.q];
+  if (sev) {   // 七和弦：根音在 E 弦或 A 弦，指型用三條相鄰的弦
+    for (let s = 0; s <= 1; s++) {
+      for (let n = 1; n <= fretMax(); n++) {
+        if ((OPEN_PC[s] + n) % 12 !== c.pc) continue;
+        const pts = sev.pts.map(p => ({ r: p.r, role: p.r === 'R' ? 'R' : p.r.endsWith('3') ? '3' : p.r.endsWith('5') ? '5' : '7', s: s + p.s - 1, f: n + p.d, fin: p.f }));
+        if (pts.every(p => p.s <= 3 && p.f >= 1 && p.f <= fretMax())) out.push({ s, n, v: 0, name: sev.zh, pts, mean: pts.reduce((a, p) => a + p.f, 0) / pts.length });
+      }
+    }
+    return out;
+  }
   for (let s = 0; s <= 2; s++) {
-    for (let n = 1; n <= FRET_MAX; n++) {
+    for (let n = 1; n <= fretMax(); n++) {
       if ((OPEN_PC[s] + n) % 12 !== c.pc) continue;
       SHAPES[c.q].forEach((sh, v) => {
         if (c.q === 'd' && v > 0) return; // 歌曲裡減和弦只用指型 A
         const pts = sh.pts.map(p => ({ r: p.r, role: p.r === 'R' ? 'R' : p.r.endsWith('3') ? '3' : '5', s: s + p.s - 1, f: n + p.d, fin: p.f }));
-        if (pts.every(p => p.s <= 3 && p.f >= 1 && p.f <= FRET_MAX)) {
+        if (pts.every(p => p.s <= 3 && p.f >= 1 && p.f <= fretMax())) {
           out.push({ s, n, v, name: sh.name, pts, mean: pts.reduce((a, p) => a + p.f, 0) / pts.length });
         }
       });
@@ -530,12 +567,12 @@ function assignShapes(bars) {
 const songPlans = new Map();
 const curSong = () => SONGS.find(s => s.id === state.song.id) || SONGS[0];
 const curPlan = () => {
-  const s = curSong();
-  if (!songPlans.has(s.id)) songPlans.set(s.id, planSong(s));
-  return songPlans.get(s.id);
+  const s = curSong(), mode = state.song.mode, key = `${s.id}:${mode}`;
+  if (!songPlans.has(key)) songPlans.set(key, planSong(s, mode));
+  return songPlans.get(key);
 };
 state.song = {
-  id: store.get('song', SONGS[0].id), from: 0, to: Infinity, countIn: true, follow: true, lastBar: -1, count: 0, countText: '', sel: 0, bpm: store.get('bpm', SONGS[0].bpm),
+  id: store.get('song', SONGS[0].id), mode: 'triad', from: 0, to: Infinity, countIn: true, follow: true, lastBar: -1, count: 0, countText: '', sel: 0, bpm: store.get('bpm', SONGS[0].bpm),
   click: true, notes: true, cover: false, revealed: new Set(),
   playing: false, pos: 0, beat: 0, timer: null, t: 0,
 };
@@ -550,6 +587,7 @@ function setSongRange(from, to) {
   sg.from = Math.max(0, Math.min(from, n - 1)); sg.to = Math.max(sg.from, Math.min(to, n - 1));
   sg.pos = 0; sg.beat = 0; sg.count = 0; sg.countText = '';
 }
+const isSongTab = () => state.tab === 'song' || state.tab === 'song7';
 const noteLabel = (b, covered) => `<i class="bc ${BEAT_ROLE[b.role]}"><span class="${covered ? 'covered' : ''}">${fmtN(b.note)}</span></i>`;
 
 function viewSong() {
@@ -562,21 +600,25 @@ function viewSong() {
   plan.forEach((bar, i) => {
     if (bar.sec !== lastSec) { grid += `<div class="secname">${bar.sec} 段</div>`; lastSec = bar.sec; }
     const hide = sg.cover && !sg.revealed.has(i);
-    const syms = bar.chords.map(c => `<span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join('');
-    const quals = bar.chords.map(c => `<span class="${Q[c.q].cls}">${Q[c.q].zh}</span>`).join('<span class="small"> / </span>');
+    const syms = bar.chords.map(c => `<span class="cs ${c.qcls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span>`).join('');
+    const quals = bar.chords.map(c => `<span class="${c.qcls}">${c.qzh}</span>`).join('<span class="small"> / </span>');
     grid += `<button class="bar ${i === sg.sel ? 'sel' : ''} ${i < sg.from || i > hi ? 'out' : ''}" data-act="songbar" data-bar="${i}">
       <span class="bn">${bar.n}</span><span class="syms">${syms}</span>
       <span class="ql ${hide ? 'covered' : ''}">${quals}</span>
       <span class="beats">${bar.beats.map((b, k) => `<span class="bw" data-beat="${k}">${noteLabel(b, hide)}</span>`).join('')}</span>
     </button>`;
   });
+  const seventh = sg.mode === 'seventh';
+  const rules7 = `<b>七和弦規則</b>：看和弦符號——有 Δ 是<b class="qM">大七</b>，有 -7 是<b class="qm">小七</b>，有 ø 是<b class="qd">半減七</b>，其餘的 7（含 7♭9）是<b class="q7">屬七</b>。<br>
+    一個和弦的小節：依序彈 <i class="bc r">根音</i><i class="bc t">三度</i><i class="bc f">五度</i><i class="bc x">七度</i>，剛好四拍。<br>
+    兩個和弦的小節：每個和弦只彈 <i class="bc r">根音</i><i class="bc t">三度</i>。<br>指型和手指跟「七和弦」頁一樣：食＝食指、中＝中指、無＝無名指、小＝小指（指型比較寬，用到第 10 格）。`;
   return `
-  <h2>${song.title}</h2>
+  <h2>${song.title}${seventh ? '（七和弦）' : ''}</h2>
   <p class="sub">${song.composer} ｜ ${song.style} ｜ ${fmtKey(song.key)} 大調 ｜ ${bpmNow()} bpm</p>
-  <div class="card small rules">
+  <div class="card small rules">${seventh ? rules7 : `
     <b>簡化規則</b>：看字母後面——有「-」彈<b class="qm">小和弦</b>；有「ø」彈<b class="qd">減和弦</b>；沒有「-」彈<b class="qM">大和弦</b>。<br>
     一個和弦的小節：<i class="bc r">根音</i><i class="bc t">三音</i><i class="bc f">五音</i><i class="bc a">接下一小節</i>（下一小節根音的前一個調內音）。<br>
-    兩個和弦的小節：每個和弦只彈 <i class="bc r">根音</i><i class="bc t">三音</i>。<br>手指跟「三和弦」頁一樣：食＝食指、中＝中指、無＝無名指、小＝小指。 <span class="hlc cs">黃色</span> 為筆記標出的對比和弦。
+    兩個和弦的小節：每個和弦只彈 <i class="bc r">根音</i><i class="bc t">三音</i>。<br>手指跟「三和弦」頁一樣：食＝食指、中＝中指、無＝無名指、小＝小指。 <span class="hlc cs">黃色</span> 為筆記標出的對比和弦。`}
   </div>
   <div class="chips">${chips}</div>
   <div class="row looprange small">循環範圍：第
@@ -609,7 +651,7 @@ function songPanelInner(bi) {
   const bar = curPlan()[bi], key = buildKey(curSong().key), pos = new Map();
   // 底圖：前六格上的調內音（只標音名），像標準的貝斯指板音名圖
   STRINGS.forEach((n, s) => {
-    for (let f = 1; f <= FRET_MAX; f++) {
+    for (let f = 1; f <= fretMax(); f++) {
       const idx = key.pcs.indexOf((OPEN_PC[s] + f) % 12);
       if (idx >= 0) pos.set(`${s}:${f}`, { s, f, cls: 'nat', label: fmtN(key.scale[idx]), beats: [] });
     }
@@ -617,13 +659,13 @@ function songPanelInner(bi) {
   bar.beats.forEach((b, k) => {
     const id = `${b.s}:${b.f}`, old = pos.get(id);
     const m = old && old.cls !== 'nat' ? old : { s: b.s, f: b.f, beats: [] };
-    m.cls = { R: 'root', 3: 't3', 5: 't5', '→': 'appr' }[b.role]; m.label = fmtN(b.note); m.tagCls = 'tagn';
+    m.cls = { R: 'root', 3: 't3', 5: 't5', 7: 't7', '→': 'appr' }[b.role]; m.label = fmtN(b.note); m.tagCls = 'tagn';
     m.beats.push(k);
     if (b.fin) m.fin = b.fin;
     pos.set(id, m);
   });
   // 和弦名稱旁標出「大和弦／小和弦／減和弦」；一小節兩個和弦時，播放中會讓目前這個亮起
-  const syms = bar.chords.map((c, ci) => `<span class="npc" data-ci="${ci}"><span class="cs ${Q[c.q].cls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span><span class="npq ${Q[c.q].cls}">${Q[c.q].full}</span></span>`).join('');
+  const syms = bar.chords.map((c, ci) => `<span class="npc" data-ci="${ci}"><span class="cs ${c.qcls} ${c.hl ? 'hlc' : ''}">${fmtN(c.sym)}</span><span class="npq ${c.qcls}">${c.qfull}</span></span>`).join('');
   // 音塊的高低依「絕對音高」排列：整首歌最低的音在最下面，最高的音在最上面
   const semi = b => 12 * Math.log2(songBeatHz(b) / OPEN_HZ[0]);
   const all = curPlan().flatMap(x => x.beats.map(semi)), lo = Math.min(...all), hi = Math.max(...all);
@@ -631,7 +673,7 @@ function songPanelInner(bi) {
     const t = hi > lo ? (semi(b) - lo) / (hi - lo) : 0.5;
     return `<span class="npb ${BEAT_ROLE[b.role]}" data-beat="${k}" style="left:${k * 25 + 0.5}%;top:calc(${(1 - t).toFixed(3)} * (100% - 56px))"><small>${k + 1}</small>${fmtN(b.note)}${b.fin ? `<em>${FINGER[b.fin]}</em>` : ''}</span>`;
   }).join('');
-  return `<div class="npboard">${boardSVG({ from: 1, to: FRET_MAX, ch: 36, cw: 54, left: 66, right: 32, strNums: true, fretStrong: [3, 5, 7], fretLabel: f => (f === 3 || f === 5 || f === 7 ? `${f} 格 ▸` : String(f)), marks: [...pos.values()], anim: true, aria: '前六格指板，這一小節的音位置' })}</div>
+  return `<div class="npboard">${boardSVG({ from: 1, to: fretMax(), ch: 36, cw: 54, left: 66, right: 32, strNums: true, fretStrong: [3, 5, 7, 9], fretLabel: f => ([3, 5, 7, 9].includes(f) ? `${f} 格 ▸` : String(f)), marks: [...pos.values()], anim: true, aria: '指板，這一小節的音位置' })}</div>
     <div class="npinfo"><div class="npt">第 ${bar.n} 小節<span class="npcount">${state.song.countText || ''}</span></div><div class="npchords">${syms}</div><div class="npbeats pitch">${chips}</div><div class="small nphint">音塊越高，音越高</div></div>`;
 }
 function songFocusBeat(k, ms) {
@@ -676,7 +718,7 @@ function songCenter(el) {
 function songMark() {
   const sg = state.song;
   document.querySelectorAll('.bar.now, .bw.now').forEach(e => e.classList.remove('now'));
-  if (state.tab !== 'song') return;
+  if (!isSongTab()) return;
   const bi = sg.playing ? songBars()[sg.pos] : sg.sel;
   songShow(bi);
   if (!sg.playing || sg.count > 0) return;
@@ -1127,13 +1169,18 @@ function playChord7(d) {
   later(animClear, 3300);
 }
 
-const VIEWS = { seventh: viewSeventh, hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
+const VIEWS = { song7: viewSong, seventh: viewSeventh, hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
 const $ = s => document.querySelector(s);
 
 function render() {
-  if (state.tab !== 'song' && state.song.playing) songStop();
+  if (!isSongTab() && state.song.playing) songStop();
+  const wantMode = state.tab === 'song7' ? 'seventh' : 'triad';
+  if (state.song.mode !== wantMode) {          // 歌曲（三和弦）與歌曲七和弦共用同一份譜，換頁時重新排音
+    if (state.song.playing) songStop();
+    state.song.mode = wantMode; state.song.lastBar = -1; state.song.revealed.clear();
+  }
   $('#view').innerHTML = VIEWS[state.tab]();
-  if (state.tab === 'song') songMark();
+  if (isSongTab()) songMark();
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === state.tab));
 }
 
