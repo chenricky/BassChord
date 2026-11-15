@@ -87,6 +87,7 @@ const store = {
 const state = {
   tab: store.get('tab', 'pitch'),
   lesson: store.get('lesson', 1),
+  distKey: store.get('distk', 'maj7'),
   key: store.get('key', 'C'),
   deg: 0,
   cover: { notes: false, mn: false, q: false },
@@ -205,7 +206,7 @@ function boardSVG(o) {
   const sx = s => L + s * cw, ry = f => T + (f - o.from) * ch;
   const rad = Math.min(12, ch / 2 - 3);
   let h = `<svg class="board" viewBox="0 0 ${W} ${H}" width="${o.width || W}" role="img" aria-label="${o.aria || '貝斯指板'}">`;
-  STRINGS.forEach((n, s) => {
+  (o.strNames || STRINGS).forEach((n, s) => {
     if (o.strNums) h += `<text class="sn sno" x="${sx(s)}" y="13">${4 - s}</text><text class="sn" x="${sx(s)}" y="31">${n}</text>`;
     else h += `<text class="sn" x="${sx(s)}" y="13">${n}</text>`;
   });
@@ -1197,7 +1198,85 @@ function playChord7(d) {
   later(animClear, 3300);
 }
 
-const VIEWS = { song7: viewSong, seventh: viewSeventh, hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
+/* ================= 距離：用位置的差距記和弦 ================= */
+// 每個音寫成「弦差＋格差」（相對於根音）。弦差：0 同一條弦、1 下一弦、2 下二弦（E→A→D→G 的方向）；
+// 格差：＋往琴橋、－往琴頭、0 同一格。半音數 ＝ 5 × 弦差 ＋ 格差。
+const DK = {
+  maj7: { name: '大七', cls: 'qM', group: '七和弦', roles: ['R', '3', '5', '7'], pts: [[0, 0], [1, -1], [1, 2], [2, 1]] },
+  dom7: { name: '屬七', cls: 'q7', group: '七和弦', roles: ['R', '3', '5', '♭7'], pts: [[0, 0], [1, -1], [1, 2], [2, 0]] },
+  m7: { name: '小七', cls: 'qm', group: '七和弦', roles: ['R', '♭3', '5', '♭7'], pts: [[0, 0], [0, 3], [1, 2], [2, 0]] },
+  m7b5: { name: '半減七', cls: 'qd', group: '七和弦', roles: ['R', '♭3', '♭5', '♭7'], pts: [[0, 0], [0, 3], [1, 1], [2, 0]] },
+  maj: { name: '大和弦', cls: 'qM', group: '三和弦', roles: ['R', '3', '5'], pts: [[0, 0], [1, -1], [1, 2]] },
+  minA: { name: '小和弦（指型 A）', cls: 'qm', group: '三和弦', roles: ['R', '♭3', '5'], pts: [[0, 0], [1, -2], [1, 2]] },
+  minB: { name: '小和弦（指型 B）', cls: 'qm', group: '三和弦', roles: ['R', '♭3', '5'], pts: [[0, 0], [0, 3], [1, 2]] },
+  dimA: { name: '減和弦（指型 A）', cls: 'qd', group: '三和弦', roles: ['R', '♭3', '♭5'], pts: [[0, 0], [1, -2], [1, 1]] },
+  dimB: { name: '減和弦（指型 B）', cls: 'qd', group: '三和弦', roles: ['R', '♭3', '♭5'], pts: [[0, 0], [0, 3], [1, 1]] },
+};
+const IVL = ['R', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7', '八度', '♭9', '9'];
+const dcode = (s, f) => (s === 0 && f === 0 ? '00' : `${s}${f === 0 ? '+0' : f > 0 ? '+' + f : '-' + (-f)}`);
+function viewDist() {
+  const key = DK[state.distKey] ? state.distKey : 'maj7', dk = DK[key];
+  const chip = k => `<button class="chip ${k === key ? 'on' : ''}" data-act="distk" data-k="${k}">${DK[k].name}</button>`;
+  const groups = ['七和弦', '三和弦'].map(g => `<div class="small">${g}</div><div class="chips">${Object.keys(DK).filter(k => DK[k].group === g).map(chip).join('')}</div>`).join('');
+  // 距離表：弦差 0–2 × 格差 −2…＋4，格子裡是音程（半音數 ＝ 5×弦差＋格差）
+  const cols = [-2, -1, 0, 1, 2, 3, 4];
+  const rowName = ['0　同一條弦', '1　下一弦', '2　下二弦'];
+  const head = `<tr><th></th>${cols.map(f => `<th>${f > 0 ? '＋' + f : f < 0 ? '－' + -f : '0'}</th>`).join('')}</tr>`;
+  const body = [0, 1, 2].map(r => `<tr><th class="rowh">${rowName[r]}</th>${cols.map(f => {
+    const sem = 5 * r + f;
+    if (sem < 0) return '<td class="dcell none">·</td>';
+    const hit = dk.pts.findIndex(p => p[0] === r && p[1] === f);
+    const cls = hit >= 0 ? ' use ' + ptCls7(dk.roles[hit]) : '';
+    return `<td class="dcell${cls}"><b>${IVL[sem] || sem}</b><small>${dcode(r, f)}</small></td>`;
+  }).join('')}</tr>`).join('');
+  // 選中的和弦：座標、半音算式、小指板
+  const coords = dk.pts.map((p, i) => `<span class="dchip ${ptCls7(dk.roles[i])}">${dk.roles[i]}<b>${dcode(p[0], p[1])}</b></span>`).join('');
+  const calc = dk.pts.map((p, i) => {
+    const sem = 5 * p[0] + p[1];
+    const expr = p[0] === 0 ? `${p[1]}` : `5×${p[0]} ${p[1] >= 0 ? '＋' : '－'} ${Math.abs(p[1])}`;
+    return `<div>${dk.roles[i]}：<b>${dcode(p[0], p[1])}</b> → ${expr} ＝ ${sem} 個半音（${IVL[sem]}）</div>`;
+  }).join('');
+  const marks = dk.pts.map((p, i) => ({ s: p[0], f: 3 + p[1], cls: ptCls7(dk.roles[i]), label: dk.roles[i], tag: dcode(p[0], p[1]) }));
+  const board = boardSVG({ from: 1, to: 7, ch: 34, cw: 56, left: 50, right: 40, strNames: ['同弦', '下一弦', '下二弦', '下三弦'], marks,
+    fretLabel: f => ['n−2', 'n−1', 'n', 'n＋1', 'n＋2', 'n＋3', 'n＋4'][f - 1], fretStrong: [3], width: 300, aria: '距離座標示意圖' });
+  const all = Object.keys(DK).map(k => `<tr><td class="${DK[k].cls} nw"><b>${DK[k].name}</b></td><td>${DK[k].pts.map((p, i) => `<span class="dchip ${ptCls7(DK[k].roles[i])}">${dcode(p[0], p[1])}</span>`).join(' ')}</td></tr>`).join('');
+  return `
+  <h2>距離：用位置的差距記和弦</h2>
+  <p class="sub">每個音用「弦差＋格差」表示它相對根音的位置。這是幫助記憶的方法。</p>
+  <h3>怎麼讀</h3>
+  <div class="card small distread">
+    <div>根音是 <b>00</b>。其他的音寫成兩個部分：<b>弦差</b>和<b>格差</b>。</div>
+    <div><b>弦差</b>：0＝同一條弦，1＝下一弦，2＝下二弦（方向是 E→A→D→G）。</div>
+    <div><b>格差</b>：<b>＋</b>是往琴橋（格數變大），<b>－</b>是往琴頭（格數變小），0 是同一格。</div>
+    <div>例如大七的七度是 <b>2+1</b>：下二弦，再往琴橋 1 格。三度是 <b>1-1</b>：下一弦，再往琴頭 1 格。</div>
+  </div>
+  <h3>選一個和弦看看</h3>
+  ${groups}
+  <div class="card">
+    <h2 style="margin:0 0 6px"><span class="${dk.cls}">${dk.name}</span>　<span class="dcode">${dk.pts.map(p => dcode(p[0], p[1])).join('　')}</span></h2>
+    <div class="distcols"><div class="distfig">${board}</div>
+      <div class="small distcalc"><div class="chips2">${coords}</div>${calc}</div></div>
+  </div>
+  <h3>距離表（每個音程有固定的座標）</h3>
+  <div class="card"><div class="tblwrap"><table class="dtable">${head}${body}</table></div>
+    <p class="small">橫排是格差（往琴頭 ← → 往琴橋），直排是弦差。格子裡大字是音程，小字是座標。目前選的和弦用顏色標出來。</p>
+    <p class="small"><b>5 的規則</b>：相鄰兩條弦差 5 個半音，一格是 1 個半音，所以<b>半音數 ＝ 5 × 弦差 ＋ 格差</b>。每一排的音程都是連續的：下一弦那排從左到右是 ♭3、3、4、♭5、5；下二弦那排是 ♭6、6、♭7、7、八度。</p></div>
+  <h3>同一個音的兩種寫法</h3>
+  <div class="card small distread">
+    <div>往「上」一條弦，同一個音要多 5 格，所以 <b>1-2 ＝ 0+3</b>（－2 ＋ 5 ＝ ＋3）。</div>
+    <div>小和弦指型 A 的 ♭3 寫成 <b>1-2</b>（下一弦退二格），指型 B 和七和弦的 ♭3 寫成 <b>0+3</b>（同一條弦進三格），是同一個音。</div>
+  </div>
+  <h3>七和弦之間只差一個數字</h3>
+  <div class="card small distread">
+    <div><b class="qM">大七</b> <span class="dcode">00 1-1 1+2 2+1</span> → <b class="q7">屬七</b> <span class="dcode">00 1-1 1+2 2+0</span>：七度從 <b>2+1</b> 變 <b>2+0</b>（退一格）。</div>
+    <div><b class="q7">屬七</b> → <b class="qm">小七</b> <span class="dcode">00 0+3 1+2 2+0</span>：三度從 <b>1-1</b> 變 <b>0+3</b>（同一個音降半音，換到同一條弦）。</div>
+    <div><b class="qm">小七</b> → <b class="qd">半減七</b> <span class="dcode">00 0+3 1+1 2+0</span>：五度從 <b>1+2</b> 變 <b>1+1</b>（退一格）。</div>
+  </div>
+  <h3>全部和弦的座標</h3>
+  <div class="card"><table class="dall">${all}</table></div>`;
+}
+
+const VIEWS = { dist: viewDist, song7: viewSong, seventh: viewSeventh, hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
 const $ = s => document.querySelector(s);
 
 function render() {
@@ -1241,6 +1320,7 @@ function init() {
       }
       else if (act === 'dyad') playDyad(K.degrees[state.deg]);
       else if (act === 'play7') playChord7(K.degrees[state.deg]);
+      else if (act === 'distk') { state.distKey = a.dataset.k; store.set('distk', state.distKey); render(); }
       else if (act === 'lesson') { state.lesson = +a.dataset.n; store.set('lesson', state.lesson); render(); }
       else if (act === 'deg') { state.deg = +a.dataset.i; render(); }
       else if (act === 'toboard') { state.tab = 'board'; store.set('tab', 'board'); window.scrollTo(0, 0); render(); }

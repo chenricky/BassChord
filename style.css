@@ -261,3 +261,27 @@ svg .dot.t7{fill:#c792ea}
 /* 歌曲七和弦：距離 */
 .dist7{margin-left:4px;color:var(--dim);font-variant-numeric:tabular-nums;letter-spacing:.04em}
 .npd{margin-left:8px;color:var(--dim);font-size:14px;font-variant-numeric:tabular-nums;letter-spacing:.04em;white-space:nowrap}
+
+/* 距離 */
+.distread div{margin:6px 0;line-height:1.8}
+.distread b{color:var(--text)}
+.dcode{font-variant-numeric:tabular-nums;letter-spacing:.06em;color:var(--text);font-weight:700}
+.distcols{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.distfig{flex:0 1 300px;min-width:240px}
+.distcalc{flex:1 1 240px;line-height:1.9}
+.chips2{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.dchip{display:inline-flex;align-items:baseline;gap:6px;border-radius:999px;padding:2px 12px;font-size:14px;color:#14161a;font-weight:600}
+.dchip b{font-size:15px}
+.dchip.root{background:var(--M)}.dchip.t3{background:var(--m)}.dchip.t5{background:var(--ok)}.dchip.t7{background:#c792ea}
+.dtable{width:100%;border-collapse:collapse;text-align:center;font-size:14px}
+.dtable th{color:var(--dim);font-weight:500;padding:6px 4px;white-space:nowrap}
+.dtable .rowh{text-align:left}
+.dcell{border:1px solid var(--line);padding:6px 4px;min-width:54px}
+.dcell b{display:block;font-size:15px}
+.dcell small{display:block;color:var(--dim);font-size:11px}
+.dcell.none{color:#4a525e}
+.dcell.use{color:#14161a}.dcell.use small{color:#2a2f38}
+.dcell.use.root{background:var(--M)}.dcell.use.t3{background:var(--m)}.dcell.use.t5{background:var(--ok)}.dcell.use.t7{background:#c792ea}
+.dall{width:100%;border-collapse:collapse}
+.dall td{padding:8px 6px;border-top:1px solid var(--line)}
+.dall tr:first-child td{border-top:0}
