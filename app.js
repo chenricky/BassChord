@@ -592,6 +592,28 @@ function setSongRange(from, to) {
 const isSongTab = () => state.tab === 'song' || state.tab === 'song7';
 const noteLabel = (b, covered) => `<i class="bc ${BEAT_ROLE[b.role]}"><span class="${covered ? 'covered' : ''}">${fmtN(b.note)}</span></i>`;
 
+// 歌曲七和弦頁的「指法與格數」說明：各類型的手指與格數，以及本曲更正過的和弦實際的位置
+function songGuide7() {
+  const rel = p => ['同一條弦', '下一弦', '下二弦'][p.s - 1];
+  const fret = d => (d === 0 ? '同一格' : d > 0 ? `n＋${d} 格` : `n－${-d} 格`);
+  const kinds = Object.values(SEV).map(sv => `<li><b class="${sv.cls}">${sv.zh}</b>：${sv.pts.map(p =>
+    p.r === 'R' ? `${FINGER[p.f]} R（根音，第 n 格）` : `${p.f ? FINGER[p.f] + ' ' : ''}${p.r}（${rel(p)}，${fret(p.d)}）`).join('、')}</li>`).join('');
+  const plan = curPlan();
+  const where = sym => {
+    const set = new Set();
+    plan.forEach(b => b.chords.forEach(c => {
+      if (c.sym === sym) set.add(SEV[c.q].pts.map(p => `${p.f ? FINGER[p.f] + ' ' : ''}${p.r}（${STRINGS[c.pos.s + p.s - 1]} 弦第 ${c.pos.n + p.d} 格）`).join('、'));
+    }));
+    return [...set].join('；');
+  };
+  const fixed = ['E7♭9', 'A7'].map(sym => {
+    const c = plan.flatMap(b => b.chords).find(x => x.sym === sym);
+    return `<li><b>${fmtN(sym)}</b> 彈<b class="${c.qcls}">${c.qzh}</b>（${c.notes.map(fmtN).join(' ')}）：${where(sym)}</li>`;
+  }).join('');
+  return `<div class="guide7"><b>指法與格數</b>（n＝根音所在的格；食＝食指、中＝中指、無＝無名指、小＝小指）
+    <ul>${kinds}</ul><b>本曲指定的兩個和弦</b><ul>${fixed}</ul></div>`;
+}
+
 function viewSong() {
   const sg = state.song, song = curSong(), plan = curPlan();
   const secs = ['all', ...song.sections.map(s => s.name)];
@@ -611,9 +633,9 @@ function viewSong() {
     </button>`;
   });
   const seventh = sg.mode === 'seventh';
-  const rules7 = `<b>七和弦規則</b>：看和弦符號——有 Δ 是<b class="qM">大七</b>，有 -7 是<b class="qm">小七</b>，有 ø 是<b class="qd">半減七</b>，其餘的 7（G7、F7、A7）是<b class="q7">屬七</b>。例外：<b>E7♭9 彈<span class="qM">大七</span></b>。<br>
+  const rules7 = !seventh ? '' : `<b>七和弦規則</b>：看和弦符號——有 Δ 是<b class="qM">大七</b>，有 -7 是<b class="qm">小七</b>，有 ø 是<b class="qd">半減七</b>，其餘的 7（G7、F7、A7）是<b class="q7">屬七</b>。例外：<b>E7♭9 彈<span class="qM">大七</span></b>。<br>
     一個和弦的小節：依序彈 <i class="bc r">根音</i><i class="bc t">三度</i><i class="bc f">五度</i><i class="bc x">七度</i>，剛好四拍。<br>
-    兩個和弦的小節：每個和弦只彈 <i class="bc r">根音</i><i class="bc t">三度</i>。<br>指型和手指跟「七和弦」頁一樣：食＝食指、中＝中指、無＝無名指、小＝小指（指型比較寬，用到第 10 格）。`;
+    兩個和弦的小節：每個和弦只彈 <i class="bc r">根音</i><i class="bc t">三度</i>。<br>指型和手指跟「七和弦」頁一樣（指型比較寬，用到第 10 格）。${songGuide7()}`;
   return `
   <h2>${song.title}${seventh ? '（七和弦）' : ''}</h2>
   <p class="sub">${song.composer} ｜ ${song.style} ｜ ${fmtKey(song.key)} 大調 ｜ ${bpmNow()} bpm</p>
