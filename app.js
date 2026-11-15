@@ -1221,8 +1221,10 @@ function viewDist() {
   // 距離表：弦差 0–2 × 格差 −2…＋4，格子裡是音程（半音數 ＝ 5×弦差＋格差）
   const cols = [-2, -1, 0, 1, 2, 3, 4];
   const rowName = ['0　同一條弦', '1　下一弦', '2　下二弦'];
-  const head = `<tr><th></th>${cols.map(f => `<th>${f > 0 ? '＋' + f : f < 0 ? '－' + -f : '0'}</th>`).join('')}</tr>`;
-  const body = [0, 1, 2].map(r => `<tr><th class="rowh">${rowName[r]}</th>${cols.map(f => {
+  // 把指板圖逆時針轉 90 度：琴頭在左、琴橋在右；同一條弦在最下面，往上依序是下一弦、下二弦
+  const head = `<tr><th></th><th colspan="3" class="axis">← 琴頭</th><th colspan="4" class="axis r">琴橋 →</th></tr>
+    <tr><th></th>${cols.map(f => `<th>${f > 0 ? '＋' + f : f < 0 ? '－' + -f : '0'}</th>`).join('')}</tr>`;
+  const body = [2, 1, 0].map(r => `<tr><th class="rowh">${rowName[r]}</th>${cols.map(f => {
     const sem = 5 * r + f;
     if (sem < 0) return '<td class="dcell none">·</td>';
     const hit = dk.pts.findIndex(p => p[0] === r && p[1] === f);
@@ -1259,7 +1261,7 @@ function viewDist() {
   </div>
   <h3>距離表（每個音程有固定的座標）</h3>
   <div class="card"><div class="tblwrap"><table class="dtable">${head}${body}</table></div>
-    <p class="small">橫排是格差（往琴頭 ← → 往琴橋），直排是弦差。格子裡大字是音程，小字是座標。目前選的和弦用顏色標出來。</p>
+    <p class="small">這張表是把上面的指板圖<b>逆時針轉 90 度</b>：琴頭在左、琴橋在右，橫排是格差；同一條弦在最下面，往上依序是下一弦、下二弦，直排是弦差。格子裡大字是音程，小字是座標。目前選的和弦用顏色標出來。</p>
     <p class="small"><b>5 的規則</b>：相鄰兩條弦差 5 個半音，一格是 1 個半音，所以<b>半音數 ＝ 5 × 弦差 ＋ 格差</b>。每一排的音程都是連續的：下一弦那排從左到右是 ♭3、3、4、♭5、5；下二弦那排是 ♭6、6、♭7、7、八度。</p></div>
   <h3>同一個音的兩種寫法</h3>
   <div class="card small distread">
