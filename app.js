@@ -1133,6 +1133,8 @@ const SEV_Q = ['maj7', 'm7', 'm7', 'maj7', 'dom7', 'm7', 'm7b5'];   // 大調順
 const CIRC = ['①', '②', '③', '④'];
 const ptCls7 = r => (r === 'R' ? 'root' : r.endsWith('3') ? 't3' : r.endsWith('5') ? 't5' : 't7');
 const sevNotes = d => [0, 2, 4, 6].map(k => K.scale[(d.i + k) % 7]);
+// 唱名（首調）：和弦音在這個調裡是第幾級，就唱對應的唱名（Do Re Mi Fa So La Si）
+const sevSol = d => [0, 2, 4, 6].map(k => PITCH.sol[(d.i + k) % 7]).join(' ');
 const sevSym = d => d.root + SEV[SEV_Q[d.i]].mark;
 function sevMarks(d) {
   const sv = SEV[SEV_Q[d.i]], ord = pitchOrder(d, sv.pts);
@@ -1150,6 +1152,7 @@ function viewSeventh() {
       <td class="rn">${d.roman}</td>
       <td class="nt">${fmtN(sevSym(d))}</td>
       ${cell('notes', d.i, `<span class="nt">${sevNotes(d).map(fmtN).join(' ')}</span>`)}
+      ${cell('notes', d.i, `<span class="nt sol">${sevSol(d)}</span>`)}
       ${cell('q', d.i, sv.zh, 'q ' + sv.cls)}
       <td class="dist"><span class="nw">${sevDist(sv)}</span></td>
       <td class="small nw">${sv.formula}</td>
@@ -1165,7 +1168,7 @@ function viewSeventh() {
     <label><input type="checkbox" data-cover="q" ${c.q ? 'checked' : ''}>類型</label>
   </div>
   <div class="card"><div class="tblwrap"><table class="tri tri7">
-    <thead><tr><th>級數</th><th>和弦</th><th>和弦音</th><th style="text-align:center">類型</th><th>距離</th><th>公式</th></tr></thead>
+    <thead><tr><th>級數</th><th>和弦</th><th>和弦音</th><th>唱名</th><th style="text-align:center">類型</th><th>距離</th><th>公式</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>
   <p class="small">大七 · 小七 · 小七 · 大七 · 屬七 · 小七 · 半減七 —— 每個大調都一樣。</p>
