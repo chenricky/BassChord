@@ -1281,7 +1281,64 @@ function viewDist() {
   <div class="card"><table class="dall">${all}</table></div>`;
 }
 
-const VIEWS = { dist: viewDist, song7: viewSong, seventh: viewSeventh, hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
+/* ================= Game（Little Green Man） ================= */
+// 遊戲本體是獨立的 game.html（原樣放進來），這裡只負責偵測裝置、用 iframe 開啟：
+//  電腦：直接嵌在頁面裡，用鍵盤玩；手機／平板：開全螢幕、盡量鎖橫向，遊戲裡有左右兩個虛擬輪盤。
+// 判斷方式和遊戲本身一樣（pointer: coarse、hover: none、或手機的 User-Agent）。
+const isMobileDevice = () => {
+  try {
+    return matchMedia('(pointer: coarse)').matches || matchMedia('(hover: none)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  } catch { return false; }
+};
+const GAME_HELP = `<h3>怎麼玩</h3>
+  <div class="card small gamehelp">
+    <div><b>電腦</b>：←→ 或 A D 左右走；<b>空白鍵</b>按住跳（短按小跳、按越久跳越高越遠）；<b>空白鍵連按兩下</b>倒掛在天花板、再連按兩下放開掉下來；↑ ↓（或 W S）在樓梯上爬；R 從第 1 層重來；掉進洞後按 Enter 或點畫面重生。</div>
+    <div><b>手機／平板</b>：左邊的輪盤移動、爬樓梯；右邊的 SPACE 輪盤長按跳躍、連按兩下倒掛／放開。直拿時會提示轉成橫向。</div>
+    <div><b>目標</b>：走過每一層，跳過石頭和洞，爬樓梯上樓（＋20 分）。紅色小人碰到會扣 10 分，可以倒掛閃開。</div>
+    <div><b>三和弦／七和弦模式</b>：綠色小人頭上是和弦的根音，依序接到紅色小人帶的和弦音（根音→三音→五音→七音），接錯扣 10 分。完成一個和弦＋30（三和弦）或＋40（七和弦），會彈出這個和弦。可選調、可開提示（和弦音、口訣、唱名）。</div>
+  </div>`;
+function viewGame() {
+  if (isMobileDevice()) {
+    return `<h2>Game</h2>
+    <p class="sub">偵測到手機／平板：遊戲會用<b>橫向全螢幕</b>開啟，用畫面上的左右輪盤操作。</p>
+    <div class="card"><button class="btn primary" data-act="gamestart">▶ 開始遊戲（橫向全螢幕）</button></div>${GAME_HELP}`;
+  }
+  return `<h2>Game</h2>
+  <p class="sub">偵測到電腦：遊戲直接在下面開啟，用鍵盤操作（先點一下遊戲畫面）。</p>
+  <div class="gameframe"><iframe id="gameFrame" src="game.html" title="Little Green Man" allow="fullscreen; autoplay"></iframe></div>${GAME_HELP}`;
+}
+let gameRotFn = null;
+function gameFitOrientation() {
+  const box = document.getElementById('gameFull');
+  if (box) box.classList.toggle('rot', window.innerHeight > window.innerWidth);   // 直拿又鎖不住橫向時，把畫面轉 90 度當橫向用
+}
+function gameOpenFull() {
+  if (document.getElementById('gameFull')) return;
+  const box = document.createElement('div');
+  box.id = 'gameFull';
+  // 全螢幕時瀏覽器會把最外層的樣式鎖住（不能旋轉），所以旋轉放在裡面那一層 #gameRot
+  box.innerHTML = '<div id="gameRot"><div class="gfbar"><span>Little Green Man</span><button class="btn" data-act="gameclose">✕ 離開遊戲</button></div><iframe class="gfframe" src="game.html" title="Little Green Man" allow="fullscreen; autoplay"></iframe></div>';
+  document.body.appendChild(box);
+  try {                                            // 在點擊裡呼叫：全螢幕、再盡量鎖橫向（iPhone 的 Safari 不支援，就靠旋轉備案）
+    const req = (box.requestFullscreen || box.webkitRequestFullscreen);
+    const r = req && req.call(box, { navigationUI: 'hide' });
+    const lock = () => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch { /* 不支援 */ } };
+    if (r && r.then) r.then(lock, () => lock()); else lock();
+  } catch { /* 不支援全螢幕 */ }
+  gameRotFn = () => setTimeout(gameFitOrientation, 60);
+  window.addEventListener('resize', gameRotFn); window.addEventListener('orientationchange', gameRotFn);
+  gameFitOrientation();
+}
+function gameCloseFull() {
+  const box = document.getElementById('gameFull');
+  if (!box) return;
+  window.removeEventListener('resize', gameRotFn); window.removeEventListener('orientationchange', gameRotFn);
+  box.remove();
+  try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch { /* 略過 */ }
+  try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch { /* 略過 */ }
+}
+
+const VIEWS = { game: viewGame, dist: viewDist, song7: viewSong, seventh: viewSeventh, hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
 const $ = s => document.querySelector(s);
 
 function render() {
@@ -1291,8 +1348,13 @@ function render() {
     if (state.song.playing) songStop();
     state.song.mode = wantMode; state.song.lastBar = -1; state.song.revealed.clear();
   }
+  if (state.tab !== 'game') gameCloseFull();
   $('#view').innerHTML = VIEWS[state.tab]();
   if (isSongTab()) songMark();
+  if (state.tab === 'game' && !isMobileDevice()) {      // 電腦：iframe 載入後把鍵盤焦點交給遊戲
+    const fr = $('#gameFrame');
+    if (fr) fr.addEventListener('load', () => { try { fr.contentWindow.focus(); } catch { /* 略過 */ } });
+  }
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === state.tab));
 }
 
@@ -1305,10 +1367,13 @@ function init() {
   $('#key').innerHTML = KEYS.map(k => `<option value="${k}">${fmtKey(k)}</option>`).join('');
   $('#key').value = state.key;
   $('#key').addEventListener('change', e => setKey(e.target.value));
+  document.addEventListener('click', e => { if (e.target.closest('[data-act=gameclose]')) gameCloseFull(); });
+
   $('#tabs').addEventListener('click', e => {
     const t = e.target.closest('button')?.dataset.tab;
     if (!t) return;
     state.tab = t; store.set('tab', t); window.scrollTo(0, 0); render();
+    if (t === 'game' && isMobileDevice()) gameOpenFull();   // 手機／平板：點 Game 就直接開全螢幕橫向遊戲
   });
 
   $('#view').addEventListener('click', e => {
@@ -1325,6 +1390,7 @@ function init() {
       }
       else if (act === 'dyad') playDyad(K.degrees[state.deg]);
       else if (act === 'play7') playChord7(K.degrees[state.deg]);
+      else if (act === 'gamestart') gameOpenFull();
       else if (act === 'distk') { state.distKey = a.dataset.k; store.set('distk', state.distKey); render(); }
       else if (act === 'lesson') { state.lesson = +a.dataset.n; store.set('lesson', state.lesson); render(); }
       else if (act === 'deg') { state.deg = +a.dataset.i; render(); }

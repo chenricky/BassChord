@@ -1,0 +1,3160 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Little Green Man - 2D Platformer & Chord Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      background: #141a26;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", Roboto, Helvetica, Arial, sans-serif;
+      color: #f1f5f9;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    .game-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      max-width: 98vw;
+    }
+
+    .stage-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toolbar {
+      width: 960px;
+      max-width: 98vw;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 14px;
+      background: rgba(30, 41, 59, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+      z-index: 20;
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mobile-restart-btn {
+      display: none;
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 4px 9px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mobile-restart-btn:active {
+      background: #334155;
+    }
+
+    .mode-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mode-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-right: 4px;
+    }
+
+    .mode-btn {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: #0f172a;
+      color: #cbd5e1;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.08s;
+    }
+
+    .mode-btn:hover {
+      background: #1e293b;
+      color: #ffffff;
+    }
+
+    .mode-btn.active {
+      background: #22c55e;
+      border-color: #4ade80;
+      color: #052e16;
+    }
+
+    .chord-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #e2e8f0;
+    }
+
+    .chord-controls.hidden {
+      display: none;
+    }
+
+    .chord-controls select {
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .chord-controls label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .hint-btn {
+      appearance: none;
+      border: 1px solid rgba(250, 204, 21, 0.35);
+      background: rgba(250, 204, 21, 0.12);
+      color: #fde047;
+      padding: 5px 10px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .hint-btn:hover {
+      background: rgba(250, 204, 21, 0.24);
+    }
+
+    canvas {
+      display: block;
+      width: 960px;
+      height: 540px;
+      max-width: 98vw;
+      max-height: 82vh;
+      aspect-ratio: 16 / 9;
+      border-radius: 10px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.12);
+      background: #87ceeb;
+      touch-action: none;
+    }
+
+    /* ============================================================
+       MOBILE LANDSCAPE LAYOUT & VIRTUAL TRANSPARENT WHEELS
+       ============================================================ */
+    body.mobile-mode .game-wrapper {
+      width: 100vw;
+      height: 100dvh;
+      max-width: 100vw;
+      gap: 4px;
+      padding:
+        max(4px, env(safe-area-inset-top))
+        max(8px, env(safe-area-inset-right))
+        max(4px, env(safe-area-inset-bottom))
+        max(8px, env(safe-area-inset-left));
+    }
+
+    body.mobile-mode .toolbar {
+      width: 100%;
+      max-width: 100%;
+      padding: 4px 10px;
+      gap: 6px;
+      border-radius: 8px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+    }
+
+    body.mobile-mode .mode-label {
+      display: none;
+    }
+
+    body.mobile-mode .mode-btn {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    body.mobile-mode .chord-controls {
+      gap: 8px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    body.mobile-mode .chord-controls select {
+      padding: 3px 6px;
+      font-size: 12px;
+    }
+
+    body.mobile-mode .hint-btn {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    body.mobile-mode .mobile-restart-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    body.mobile-mode .stage-container {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    body.mobile-mode canvas {
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+    }
+
+    .mobile-controls {
+      display: none;
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    body.mobile-mode .mobile-controls.visible {
+      display: block;
+    }
+
+    .v-wheel {
+      position: absolute;
+      bottom: max(14px, calc(env(safe-area-inset-bottom) + 10px));
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.22);
+      border: 2px solid rgba(255, 255, 255, 0.34);
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.22), inset 0 0 18px rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      pointer-events: auto;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Left virtual wheel: Up / Down / Left / Right */
+    .v-wheel-left {
+      left: max(16px, calc(env(safe-area-inset-left) + 12px));
+      width: clamp(114px, 32vh, 148px);
+      height: clamp(114px, 32vh, 148px);
+    }
+
+    .v-wheel-left .wheel-ring {
+      position: absolute;
+      inset: 14%;
+      border-radius: 50%;
+      border: 1px dashed rgba(255, 255, 255, 0.22);
+      pointer-events: none;
+    }
+
+    .v-dir {
+      position: absolute;
+      font-size: 13px;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.52);
+      pointer-events: none;
+      transition: color 0.08s, transform 0.08s, text-shadow 0.08s;
+      line-height: 1;
+    }
+
+    .v-dir-up { top: 9px; left: 50%; transform: translateX(-50%); }
+    .v-dir-down { bottom: 9px; left: 50%; transform: translateX(-50%); }
+    .v-dir-left { left: 10px; top: 50%; transform: translateY(-50%); }
+    .v-dir-right { right: 10px; top: 50%; transform: translateY(-50%); }
+
+    .v-dir.active {
+      color: #4ade80;
+      text-shadow: 0 0 10px rgba(74, 222, 128, 0.85);
+    }
+
+    .v-knob {
+      width: 42%;
+      height: 42%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.45), rgba(148, 163, 184, 0.26));
+      border: 2px solid rgba(255, 255, 255, 0.55);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+      pointer-events: none;
+      transform: translate(0px, 0px);
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .v-wheel-left.active .v-knob {
+      background: radial-gradient(circle at 35% 35%, rgba(134, 239, 172, 0.62), rgba(34, 197, 94, 0.34));
+      border-color: rgba(134, 239, 172, 0.88);
+    }
+
+    /* Right virtual wheel: Space bar (Hold to Jump / Double-Tap to Hang) */
+    .v-wheel-right {
+      right: max(16px, calc(env(safe-area-inset-right) + 12px));
+      width: clamp(106px, 30vh, 138px);
+      height: clamp(106px, 30vh, 138px);
+      transition: transform 0.08s, background 0.1s, border-color 0.1s, box-shadow 0.1s;
+    }
+
+    .v-wheel-right .space-inner {
+      width: 72%;
+      height: 72%;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1.5px solid rgba(255, 255, 255, 0.36);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      pointer-events: none;
+    }
+
+    .v-wheel-right .space-title {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: rgba(255, 255, 255, 0.88);
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .v-wheel-right .space-sub {
+      font-size: 9px;
+      font-weight: 700;
+      color: rgba(226, 232, 240, 0.72);
+      letter-spacing: 0.03em;
+    }
+
+    .v-wheel-right.pressed {
+      transform: scale(0.93);
+      background: rgba(34, 197, 94, 0.34);
+      border-color: rgba(134, 239, 172, 0.9);
+      box-shadow: 0 0 22px rgba(74, 222, 128, 0.48), inset 0 0 16px rgba(134, 239, 172, 0.28);
+    }
+
+    .v-wheel-right.hanging {
+      border-color: rgba(250, 204, 21, 0.8);
+      box-shadow: 0 0 18px rgba(250, 204, 21, 0.36);
+    }
+
+    .v-wheel-right.hanging .space-sub {
+      color: #fde047;
+    }
+
+    /* Portrait Rotate Prompt Overlay for Mobile */
+    .rotate-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .rotate-overlay.visible {
+      display: flex;
+    }
+
+    .rotate-icon {
+      width: 58px;
+      height: 92px;
+      border: 3.5px solid #4ade80;
+      border-radius: 12px;
+      position: relative;
+      animation: rotatePhone 2.1s ease-in-out infinite;
+    }
+
+    .rotate-icon::after {
+      content: "";
+      position: absolute;
+      bottom: 7px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 14px;
+      height: 3px;
+      border-radius: 2px;
+      background: #4ade80;
+    }
+
+    @keyframes rotatePhone {
+      0%, 20% { transform: rotate(0deg); }
+      55%, 80% { transform: rotate(-90deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    .rotate-overlay h2 {
+      font-size: 20px;
+      color: #f8fafc;
+    }
+
+    .rotate-overlay p {
+      font-size: 14px;
+      color: #94a3b8;
+      max-width: 280px;
+      line-height: 1.5;
+    }
+
+    .rotate-dismiss {
+      margin-top: 8px;
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: transparent;
+      color: #94a3b8;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-wrapper">
+    <div class="toolbar">
+      <div class="mode-group">
+        <span class="mode-label">模式 Mode:</span>
+        <button class="mode-btn active" data-mode="normal" type="button">Normal</button>
+        <button class="mode-btn" data-mode="triad" type="button">三和弦</button>
+        <button class="mode-btn" data-mode="seventh" type="button">七和弦</button>
+      </div>
+      <div class="toolbar-right">
+        <div class="chord-controls hidden" id="chordControls">
+          <label>
+            調:
+            <select id="keySelect" aria-label="選擇大調"></select>
+          </label>
+          <label title="顯示和弦提示與口訣/唱名">
+            <input type="checkbox" id="hintToggle" />
+            顯示提示
+          </label>
+          <button class="hint-btn" id="listenBtn" type="button">▶ 試聽根音</button>
+        </div>
+        <button class="mobile-restart-btn" id="mobileRestartBtn" type="button" aria-label="Restart">↺ 重來</button>
+      </div>
+    </div>
+    <div class="stage-container">
+      <canvas id="gameCanvas" width="960" height="540"></canvas>
+    </div>
+  </div>
+
+  <!-- Virtual transparent controls for mobile devices -->
+  <div class="mobile-controls" id="mobileControls" aria-hidden="true">
+    <div class="v-wheel v-wheel-left" id="moveWheel">
+      <div class="wheel-ring"></div>
+      <span class="v-dir v-dir-up" id="dirUp">▲</span>
+      <span class="v-dir v-dir-down" id="dirDown">▼</span>
+      <span class="v-dir v-dir-left" id="dirLeft">◀</span>
+      <span class="v-dir v-dir-right" id="dirRight">▶</span>
+      <div class="v-knob" id="moveKnob"></div>
+    </div>
+    <div class="v-wheel v-wheel-right" id="spaceWheel">
+      <div class="space-inner">
+        <span class="space-title">SPACE</span>
+        <span class="space-sub" id="spaceSub">HOLD / 2×</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Landscape orientation prompt for mobile portrait -->
+  <div class="rotate-overlay" id="rotateOverlay">
+    <div class="rotate-icon"></div>
+    <h2>請將手機轉為橫向遊玩</h2>
+    <p>Rotate your device to landscape mode for the best experience with virtual wheel controls.</p>
+    <button class="rotate-dismiss" id="rotateDismiss" type="button">繼續遊玩 (Continue)</button>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+
+      const W = 960;
+      const H = 540;
+
+      // ============================================================
+      // MUSIC THEORY & BASS SYNTHESIS (from BassChord-local/app.js)
+      // ============================================================
+      const LET = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+      const NAT = [0, 2, 4, 5, 7, 9, 11];
+      const MAJ = [0, 2, 4, 5, 7, 9, 11];
+      const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+      const QUAL = ['M', 'm', 'm', 'M', 'M', 'm', 'd'];
+      const Q = {
+        M: { zh: '大', full: '大和弦', sym: '', formula: 'R 3 5', color: '#facc15' },
+        m: { zh: '小', full: '小和弦', sym: 'm', formula: 'R ♭3 5', color: '#60a5fa' },
+        d: { zh: '減', full: '減和弦', sym: '°', formula: 'R ♭3 ♭5', color: '#f87171' },
+      };
+      const KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+      const MNEMONIC = [
+        'Cat Eat Grass',
+        "Don't Fall Asleep",
+        'Every Good Boy',
+        'Fat Angry Cat',
+        'Go Back Down',
+        'Always Cook Eggs',
+        'Best Dog Friends',
+      ];
+      const SOLFEGE = ['Do', 'Re', 'Mi', 'Fa', 'So', 'La', 'Si'];
+
+      // Bass open string frequencies (E1, A1, D2, G2)
+      const OPEN_HZ = [41.2034, 55, 73.4162, 97.9989];
+      const fretHz = (s, f) => OPEN_HZ[s] * Math.pow(2, f / 12);
+
+      // Triad fingerboard shapes on A-string root (from BassChord-local)
+      const TRIAD_SHAPES = {
+        M: [{ s: 1, d: 0 }, { s: 2, d: -1 }, { s: 2, d: 2 }],
+        m: [{ s: 1, d: 0 }, { s: 2, d: -2 }, { s: 2, d: 2 }],
+        d: [{ s: 1, d: 0 }, { s: 2, d: -2 }, { s: 2, d: 1 }],
+      };
+
+      // Seventh chord definitions & shapes (from BassChord-local)
+      const SEV = {
+        maj7: {
+          zh: '大七', full: '大七和弦', formula: 'R 3 5 7', mark: 'Δ7', color: '#facc15',
+          pts: [{ s: 1, d: 0 }, { s: 2, d: -1 }, { s: 2, d: 2 }, { s: 3, d: 1 }],
+        },
+        m7: {
+          zh: '小七', full: '小七和弦', formula: 'R ♭3 5 ♭7', mark: '-7', color: '#60a5fa',
+          pts: [{ s: 1, d: 0 }, { s: 1, d: 3 }, { s: 2, d: 2 }, { s: 3, d: 0 }],
+        },
+        dom7: {
+          zh: '屬七', full: '屬七和弦', formula: 'R 3 5 ♭7', mark: '7', color: '#fb923c',
+          pts: [{ s: 1, d: 0 }, { s: 2, d: -1 }, { s: 2, d: 2 }, { s: 3, d: 0 }],
+        },
+        m7b5: {
+          zh: '半減七', full: '半減七和弦', formula: 'R ♭3 ♭5 ♭7', mark: 'ø7', color: '#f87171',
+          pts: [{ s: 1, d: 0 }, { s: 1, d: 3 }, { s: 2, d: 1 }, { s: 3, d: 0 }],
+        },
+      };
+      const SEV_Q = ['maj7', 'm7', 'm7', 'maj7', 'dom7', 'm7', 'm7b5'];
+
+      const fmtN = (n) => n.replace(/b/g, '♭').replace(/#/g, '♯');
+
+      function pcOfName(n) {
+        let a = 0;
+        for (const c of n.slice(1)) a += c === '#' ? 1 : -1;
+        return (NAT[LET.indexOf(n[0])] + a + 12) % 12;
+      }
+
+      function buildKey(k) {
+        const li = LET.indexOf(k[0]);
+        const rpc = pcOfName(k);
+        const scale = [];
+        const pcs = [];
+        for (let i = 0; i < 7; i++) {
+          const L = (li + i) % 7;
+          const pc = (rpc + MAJ[i]) % 12;
+          let a = (((pc - NAT[L]) % 12) + 12) % 12;
+          if (a > 6) a -= 12;
+          scale.push(LET[L] + (a > 0 ? '#'.repeat(a) : 'b'.repeat(-a)));
+          pcs.push(pc);
+        }
+        const degrees = scale.map((root, i) => {
+          const f = (((pcs[i] - 9) % 12) + 12) % 12; // fret on A string
+          const fret = f < 3 ? f + 12 : f;
+          const triadNotes = [root, scale[(i + 2) % 7], scale[(i + 4) % 7]];
+          const seventhNotes = [root, scale[(i + 2) % 7], scale[(i + 4) % 7], scale[(i + 6) % 7]];
+          const triadHz = TRIAD_SHAPES[QUAL[i]]
+            .map((p) => fretHz(p.s, fret + p.d))
+            .sort((a, b) => a - b);
+          const sevKind = SEV_Q[i];
+          const seventhHz = SEV[sevKind].pts
+            .map((p) => fretHz(p.s, fret + p.d))
+            .sort((a, b) => a - b);
+          return {
+            i,
+            roman: ROMAN[i],
+            root,
+            pc: pcs[i],
+            q: QUAL[i],
+            sevKind,
+            fret,
+            triadNotes,
+            seventhNotes,
+            triadHz,
+            seventhHz,
+            triadSol: [0, 2, 4].map((step) => SOLFEGE[(i + step) % 7]).join(' '),
+            seventhSol: [0, 2, 4, 6].map((step) => SOLFEGE[(i + step) % 7]).join(' '),
+            mn: k === 'C' ? MNEMONIC[i] : null,
+          };
+        });
+        return { key: k, scale, pcs, degrees };
+      }
+
+      // ============================================================
+      // AUDIO ENGINE (BassChord-local bass timbre + subtle game SFX)
+      // ============================================================
+      let audioCtx = null;
+      function getAudio() {
+        if (!audioCtx) {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) return null;
+          audioCtx = new Ctx();
+        }
+        if (audioCtx.state !== 'running') audioCtx.resume();
+        return audioCtx;
+      }
+
+      // Bass sound from BassChord-local: fundamental triangle + 2nd & 3rd sine harmonics
+      function bassTone(freq, at = 0, dur = 0.85, vol = 0.24) {
+        try {
+          const c = getAudio();
+          if (!c) return;
+          const t = c.currentTime + at;
+          const g = c.createGain();
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+          g.connect(c.destination);
+          [
+            [1, 'triangle', 0.57],
+            [2, 'sine', 0.29],
+            [3, 'sine', 0.14],
+          ].forEach(([m, type, w]) => {
+            const o = c.createOscillator();
+            const og = c.createGain();
+            o.type = type;
+            o.frequency.value = freq * m;
+            og.gain.value = w;
+            o.connect(og).connect(g);
+            o.start(t);
+            o.stop(t + dur + 0.05);
+          });
+        } catch (_) {
+          // Ignore audio restrictions
+        }
+      }
+
+      // Play completed triad (3 ascending bass notes + full chord strum) or 7th chord (4 notes + chord)
+      function playCompletedChord(degree, mode) {
+        const freqs = mode === 'seventh' ? degree.seventhHz : degree.triadHz;
+        const step = mode === 'seventh' ? 0.23 : 0.26;
+        const strumAt = freqs.length * step + 0.12;
+        freqs.forEach((hz, idx) => {
+          bassTone(hz, idx * step, 0.7, 0.24);
+          bassTone(hz, strumAt, 1.25, mode === 'seventh' ? 0.12 : 0.14);
+        });
+      }
+
+      function playTone(freq, duration, type = 'sine', volume = 0.07, endFreq = null) {
+        try {
+          const c = getAudio();
+          if (!c) return;
+          const osc = c.createOscillator();
+          const gain = c.createGain();
+          osc.type = type;
+          const now = c.currentTime;
+          osc.frequency.setValueAtTime(freq, now);
+          if (endFreq !== null) {
+            osc.frequency.exponentialRampToValueAtTime(Math.max(40, endFreq), now + duration);
+          }
+          gain.gain.setValueAtTime(volume, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+          osc.connect(gain);
+          gain.connect(c.destination);
+          osc.start(now);
+          osc.stop(now + duration);
+        } catch (_) {
+          // Ignore audio errors
+        }
+      }
+
+      // ============================================================
+      // CONSTANTS & FLOOR LAYOUT GENERATOR
+      // ============================================================
+      const GROUND_Y = 460;
+      const SECOND_FLOOR_Y = 240;
+      const SECOND_FLOOR_THICKNESS = 26;
+      const GROUND_CEILING_Y = SECOND_FLOOR_Y + SECOND_FLOOR_THICKNESS; // 266
+      const TOP_ROOF_Y = 16;
+
+      // Physics tuning
+      const MOVE_SPEED = 220;
+      const CLIMB_SPEED = 165;
+      const GRAVITY = 1650;
+      const JUMP_INITIAL_VY = -255;
+      const JUMP_BOOST_DURATION = 0.24;
+      const JUMP_BOOST_GRAVITY = -160;
+      const JUMP_GLIDE_MAX_HOLD = 0.64;
+      const JUMP_GLIDE_GRAVITY = 760;
+      const JUMP_RELEASE_CUT_VY = 0;
+      const HANG_ZIP_SPEED = 1750;
+      const DOUBLE_TAP_WINDOW_MS = 300;
+      const DOUBLE_TAP_MAX_FIRST_HOLD_MS = 220;
+      const RED_WALK_SPEED = 145;
+      const INVULN_DURATION = 1.0;
+
+      // Transition timing (seconds)
+      const TRANS_SINK_DUR = 0.55;
+      const TRANS_DROP_DUR = 0.65;
+      const TRANS_APPEAR_DUR = 0.55;
+      const TRANS_TOTAL_DUR = TRANS_SINK_DUR + TRANS_DROP_DUR + TRANS_APPEAR_DUR;
+
+      // Game modes
+      const GameMode = {
+        NORMAL: 'normal',
+        TRIAD: 'triad',
+        SEVENTH: 'seventh',
+      };
+
+      // Exact two-state machine for the green character
+      const PlayerState = {
+        ON_GROUND: 'ON_GROUND',
+        HANGING: 'HANGING',
+      };
+
+      // Game flow phases
+      const GamePhase = {
+        SPAWNING: 'SPAWNING',
+        PLAYING: 'PLAYING',
+        TRANSITIONING: 'TRANSITIONING',
+        PIT_DEAD: 'PIT_DEAD',
+      };
+
+      const LAYOUT_TEMPLATES = [
+        // Template 0 (odd: left -> right, 2 pits + 3 stones)
+        {
+          pits: [
+            { x: 272, width: 96 },
+            { x: 568, width: 108 },
+          ],
+          stones: [
+            { x: 158, width: 32, height: 28 },
+            { x: 450, width: 36, height: 34 },
+            { x: 758, width: 34, height: 30 },
+          ],
+        },
+        // Template 1 (even: right -> left, 2 pits + 3 stones)
+        {
+          pits: [
+            { x: 266, width: 104 },
+            { x: 572, width: 100 },
+          ],
+          stones: [
+            { x: 158, width: 32, height: 28 },
+            { x: 456, width: 36, height: 34 },
+            { x: 762, width: 34, height: 30 },
+          ],
+        },
+        // Template 2 (odd: left -> right, 3 pits + 2 stones)
+        {
+          pits: [
+            { x: 156, width: 88 },
+            { x: 432, width: 100 },
+            { x: 716, width: 92 },
+          ],
+          stones: [
+            { x: 326, width: 34, height: 32 },
+            { x: 616, width: 36, height: 34 },
+          ],
+        },
+        // Template 3 (even: right -> left, 3 pits + 2 stones)
+        {
+          pits: [
+            { x: 154, width: 92 },
+            { x: 428, width: 100 },
+            { x: 716, width: 88 },
+          ],
+          stones: [
+            { x: 318, width: 36, height: 32 },
+            { x: 604, width: 34, height: 34 },
+          ],
+        },
+      ];
+
+      function computeGroundSegments(pits) {
+        const segs = [];
+        let cursor = 0;
+        const sorted = [...pits].sort((a, b) => a.x - b.x);
+        for (const pit of sorted) {
+          segs.push({ x: cursor, width: pit.x - cursor });
+          cursor = pit.x + pit.width;
+        }
+        segs.push({ x: cursor, width: W - cursor });
+        return segs;
+      }
+
+      function buildFloorData(floorNum) {
+        const isOdd = floorNum % 2 === 1;
+        const dir = isOdd ? 1 : -1;
+        const templateIdx = (floorNum - 1) % LAYOUT_TEMPLATES.length;
+        const tmpl = LAYOUT_TEMPLATES[templateIdx];
+
+        const pits = tmpl.pits.map((p) => ({ x: p.x, width: p.width }));
+        const groundSegments = computeGroundSegments(pits);
+        const stones = tmpl.stones.map((s) => ({
+          x: s.x,
+          y: GROUND_Y - s.height,
+          width: s.width,
+          height: s.height,
+        }));
+
+        const secondFloor = isOdd
+          ? { x: 460, y: SECOND_FLOOR_Y, width: 492, height: SECOND_FLOOR_THICKNESS }
+          : { x: 8, y: SECOND_FLOOR_Y, width: 492, height: SECOND_FLOOR_THICKNESS };
+
+        const ceilingBeam = isOdd
+          ? { x: 0, y: GROUND_CEILING_Y - 10, width: secondFloor.x, height: 10 }
+          : {
+              x: secondFloor.x + secondFloor.width,
+              y: GROUND_CEILING_Y - 10,
+              width: W - (secondFloor.x + secondFloor.width),
+              height: 10,
+            };
+
+        const stairs = isOdd
+          ? { x: 882, width: 48, topY: SECOND_FLOOR_Y, bottomY: GROUND_Y }
+          : { x: 30, width: 48, topY: SECOND_FLOOR_Y, bottomY: GROUND_Y };
+
+        const spawnX = isOdd ? 68 : 892;
+
+        return {
+          floorNum,
+          dir,
+          isOdd,
+          pits,
+          groundSegments,
+          stones,
+          secondFloor,
+          ceilingBeam,
+          stairs,
+          spawnX,
+        };
+      }
+
+      const SKY_PALETTES = [
+        ['#6ec6f5', '#bae6fd', '#e0f2fe', '#fef08a'],
+        ['#60a5fa', '#a5d8ff', '#dbeafe', '#fde047'],
+        ['#38bdf8', '#93c5fd', '#fed7aa', '#fdba74'],
+        ['#818cf8', '#f472b6', '#fde68a', '#fca5a5'],
+        ['#312e81', '#4f46e5', '#93c5fd', '#e0e7ff'],
+      ];
+
+      // ============================================================
+      // GAME STATE
+      // ============================================================
+      let gameMode = GameMode.NORMAL;
+      let currentKeyName = 'C';
+      let currentKey = buildKey(currentKeyName);
+      let showChordHint = false;
+
+      let gamePhase = GamePhase.SPAWNING;
+      let score = 100;
+      let currentFloorNum = 1;
+      let floorData = buildFloorData(1);
+      let gameTime = 0;
+      let scoreFlashTimer = 0;
+      let scoreGoodFlashTimer = 0;
+      let controlsBannerTimer = 0;
+      let transition = null;
+
+      // Chord game state (for 三和弦 & 七和弦 modes)
+      const chordState = {
+        degree: null,         // degree object from currentKey.degrees
+        targetNotes: [],      // e.g. ['C', 'E', 'G'] or ['C', 'E', 'G', 'B']
+        collectedCount: 1,    // root note (index 0) is already carried by green man
+        chordsCleared: 0,
+        wrongSpawnsInRow: 0,
+        celebrating: null,    // { degree, notes, mode, timer, duration } while playing completed chord
+      };
+
+      const kbKeys = {
+        left: false,
+        right: false,
+        up: false,
+        down: false,
+        space: false,
+      };
+
+      const touchKeys = {
+        left: false,
+        right: false,
+        up: false,
+        down: false,
+        space: false,
+      };
+
+      const keys = {
+        left: false,
+        right: false,
+        up: false,
+        down: false,
+        space: false,
+      };
+
+      function syncKeys() {
+        keys.left = kbKeys.left || touchKeys.left;
+        keys.right = kbKeys.right || touchKeys.right;
+        keys.up = kbKeys.up || touchKeys.up;
+        keys.down = kbKeys.down || touchKeys.down;
+        keys.space = kbKeys.space || touchKeys.space;
+      }
+
+      // Mobile device & landscape state
+      let isMobileDevice =
+        (window.matchMedia &&
+          (window.matchMedia('(pointer: coarse)').matches ||
+            window.matchMedia('(hover: none)').matches)) ||
+        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+      let rotateDismissed = false;
+      let isPortraitBlocked = false;
+
+      let lastSpaceTapTime = -Infinity;
+      let spacePressStartTime = -Infinity;
+      let lastSpaceHoldDuration = 0;
+      let ignoreSpaceHoldUntilRelease = false;
+
+      const player = {
+        x: 54,
+        y: 49,
+        width: 28,
+        height: 34,
+        vx: 0,
+        vy: 0,
+        facing: 1,
+        state: PlayerState.ON_GROUND,
+        floor: 0,
+        grounded: false,
+        isJumping: false,
+        jumpHoldTimer: 0,
+        onStairs: false,
+        hangingAnchored: false,
+        invulnTimer: 0,
+        redFlashTimer: 0,
+        goodFlashTimer: 0,
+        walkCycle: 0,
+        squashX: 1,
+        squashY: 1,
+        visible: false,
+      };
+
+      let blackHoles = [];
+      let redChars = [];
+      let particles = [];
+      let floatingTexts = [];
+      let redSpawnTimer = 3.5;
+
+      const clouds = [
+        { x: 130, y: 74, scale: 1.0, speed: 9 },
+        { x: 370, y: 52, scale: 0.8, speed: 6 },
+        { x: 640, y: 88, scale: 1.15, speed: 11 },
+        { x: 850, y: 60, scale: 0.75, speed: 7 },
+      ];
+
+      // ============================================================
+      // CHORD MODE HELPERS
+      // ============================================================
+      function isChordMode() {
+        return gameMode === GameMode.TRIAD || gameMode === GameMode.SEVENTH;
+      }
+
+      function pickNewChordRoot(excludeIndex = -1, playRootSound = true) {
+        const candidates = currentKey.degrees.filter((d) => d.i !== excludeIndex);
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+        chordState.degree = chosen;
+        chordState.targetNotes =
+          gameMode === GameMode.SEVENTH ? chosen.seventhNotes.slice() : chosen.triadNotes.slice();
+        chordState.collectedCount = 1; // Green man starts with root note (index 0)
+        chordState.wrongSpawnsInRow = 0;
+        chordState.celebrating = null;
+
+        if (playRootSound) {
+          bassTone(chosen.triadHz[0], 0, 0.55, 0.2);
+        }
+      }
+
+      function getExpectedNextNote() {
+        if (!isChordMode() || !chordState.degree || chordState.celebrating) return null;
+        return chordState.targetNotes[chordState.collectedCount] || null;
+      }
+
+      function pickRedNote() {
+        const expected = getExpectedNextNote();
+        const scale = currentKey.scale;
+        if (!expected) {
+          return scale[Math.floor(Math.random() * scale.length)];
+        }
+
+        // Smart weighted random so the player sees a fair mix of target notes & distractors
+        // (Guarantees the needed note shows up after at most 2 distractor spawns)
+        const needChance =
+          chordState.wrongSpawnsInRow >= 2
+            ? 1.0
+            : chordState.wrongSpawnsInRow === 1
+              ? 0.58
+              : 0.42;
+
+        if (Math.random() < needChance) {
+          chordState.wrongSpawnsInRow = 0;
+          return expected;
+        }
+
+        const distractors = scale.filter((n) => n !== expected);
+        chordState.wrongSpawnsInRow += 1;
+        return distractors[Math.floor(Math.random() * distractors.length)];
+      }
+
+      function getChordTitle(deg, mode) {
+        if (mode === GameMode.SEVENTH) {
+          const sv = SEV[deg.sevKind];
+          return {
+            short: `${fmtN(deg.root)}${sv.mark}`,
+            sub: `${deg.roman} · ${sv.zh}`,
+            color: sv.color,
+            hintSub: deg.seventhSol,
+          };
+        }
+        const q = Q[deg.q];
+        return {
+          short: `${fmtN(deg.root)} ${q.zh}`,
+          sub: `${deg.roman} · ${q.full}`,
+          color: q.color,
+          hintSub: deg.mn || deg.triadSol,
+        };
+      }
+
+      function randomRedInterval() {
+        if (isChordMode()) {
+          return 2.3 + Math.random() * 1.9; // brisker pace for chord building
+        }
+        return 3.0 + Math.random() * 3.0; // original 3-6 seconds in normal mode
+      }
+
+      // ============================================================
+      // EASING & GEOMETRY HELPERS
+      // ============================================================
+      const clamp01 = (v) => Math.max(0, Math.min(1, v));
+      const lerp = (a, b, t) => a + (b - a) * t;
+      const easeInQuad = (t) => t * t;
+      const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+      const easeOutBack = (t) => {
+        const c1 = 1.4;
+        const c3 = c1 + 1;
+        return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+      };
+
+      function getCeilingY(floor) {
+        return floor === 0 ? GROUND_CEILING_Y : TOP_ROOF_Y;
+      }
+
+      function rectsOverlap(a, b) {
+        return (
+          a.x < b.x + b.width &&
+          a.x + a.width > b.x &&
+          a.y < b.y + b.height &&
+          a.y + a.height > b.y
+        );
+      }
+
+      function isOverSolidGround(x, width) {
+        const footLeft = x + 4;
+        const footRight = x + width - 4;
+        for (const seg of floorData.groundSegments) {
+          if (footRight > seg.x && footLeft < seg.x + seg.width) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function isNearStairs() {
+        const st = floorData.stairs;
+        const centerX = player.x + player.width / 2;
+        return (
+          player.floor === 0 &&
+          centerX >= st.x - 10 &&
+          centerX <= st.x + st.width + 10 &&
+          player.y + player.height <= GROUND_Y + 4 &&
+          player.y + player.height >= SECOND_FLOOR_Y - 4
+        );
+      }
+
+      function spawnDust(x, y, count = 10, color = '#e8dfc8') {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.PI + (Math.random() - 0.5) * Math.PI * 0.9;
+          const speed = 35 + Math.random() * 95;
+          particles.push({
+            x: x + (Math.random() - 0.5) * 18,
+            y: y - Math.random() * 3,
+            vx: Math.cos(angle) * speed * (Math.random() < 0.5 ? 1 : -1),
+            vy: -20 - Math.random() * 65,
+            radius: 3 + Math.random() * 4,
+            life: 0.35 + Math.random() * 0.25,
+            maxLife: 0.6,
+            color,
+            gravity: 160,
+          });
+        }
+      }
+
+      function spawnGrabSparkles(x, y, color = '#a7f3d0', count = 8) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 35 + Math.random() * 80;
+          particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            radius: 2.2 + Math.random() * 2.5,
+            life: 0.28 + Math.random() * 0.22,
+            maxLife: 0.5,
+            color,
+            gravity: 40,
+          });
+        }
+      }
+
+      function spawnConfetti(x, y, count = 28) {
+        const palette = ['#22c55e', '#facc15', '#38bdf8', '#f472b6', '#fb923c', '#a78bfa'];
+        for (let i = 0; i < count; i++) {
+          const angle = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+          const speed = 90 + Math.random() * 200;
+          particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            radius: 3.5 + Math.random() * 2.5,
+            life: 0.8 + Math.random() * 0.8,
+            maxLife: 1.6,
+            color: palette[i % palette.length],
+            gravity: 340,
+            square: true,
+          });
+        }
+      }
+
+      function addFloatingText(x, y, text, color) {
+        floatingTexts.push({
+          x,
+          y,
+          text,
+          color,
+          life: 1.25,
+          maxLife: 1.25,
+        });
+      }
+
+      function createBlackHole(x, y, maxRadius, onRelease) {
+        blackHoles.push({
+          x,
+          y,
+          radius: 0,
+          maxRadius,
+          age: 0,
+          openDuration: 0.42,
+          holdDuration: 0.35,
+          closeDuration: 0.38,
+          released: false,
+          onRelease,
+        });
+      }
+
+      // ============================================================
+      // START / RESPAWN / FLOOR ADVANCE TRANSITION
+      // ============================================================
+      function spawnPlayerFromBlackHole(targetFloorNum, resetScore, freshChord) {
+        if (resetScore) {
+          score = 100;
+          controlsBannerTimer = 0;
+          chordState.chordsCleared = 0;
+        }
+        currentFloorNum = targetFloorNum;
+        floorData = buildFloorData(currentFloorNum);
+
+        scoreFlashTimer = 0;
+        scoreGoodFlashTimer = 0;
+        gamePhase = GamePhase.SPAWNING;
+        transition = null;
+
+        blackHoles = [];
+        redChars = [];
+        particles = [];
+        floatingTexts = [];
+        redSpawnTimer = isChordMode() ? 1.4 : randomRedInterval();
+
+        lastSpaceTapTime = -Infinity;
+        spacePressStartTime = -Infinity;
+        lastSpaceHoldDuration = 0;
+        ignoreSpaceHoldUntilRelease = false;
+
+        if (isChordMode() && (freshChord || !chordState.degree)) {
+          pickNewChordRoot(-1, false);
+        }
+
+        const spawnX = floorData.spawnX;
+        const holeY = 66;
+
+        player.x = spawnX - player.width / 2;
+        player.y = holeY - player.height / 2;
+        player.vx = 0;
+        player.vy = 0;
+        player.facing = floorData.dir;
+        player.state = PlayerState.ON_GROUND;
+        player.floor = 0;
+        player.grounded = false;
+        player.isJumping = false;
+        player.jumpHoldTimer = 0;
+        player.onStairs = false;
+        player.hangingAnchored = false;
+        player.invulnTimer = 0;
+        player.redFlashTimer = 0;
+        player.goodFlashTimer = 0;
+        player.walkCycle = 0;
+        player.squashX = 1;
+        player.squashY = 1;
+        player.visible = false;
+
+        createBlackHole(spawnX, holeY, 32, () => {
+          player.visible = true;
+          player.x = spawnX - player.width / 2;
+          player.y = holeY - player.height / 2;
+          player.vx = 0;
+          player.vy = 30;
+          playTone(260, 0.22, 'sine', 0.07, 140);
+        });
+      }
+
+      function resetLevel() {
+        spawnPlayerFromBlackHole(1, true, true);
+      }
+
+      function retryCurrentFloor() {
+        spawnPlayerFromBlackHole(currentFloorNum, false, false);
+      }
+
+      function beginFloorTransition() {
+        const nextFloorNum = currentFloorNum + 1;
+        const nextFloorData = buildFloorData(nextFloorNum);
+
+        score += 20;
+        scoreGoodFlashTimer = 0.45;
+        addFloatingText(
+          player.x + player.width / 2,
+          player.y - 16,
+          `Floor ${nextFloorNum}! +20`,
+          '#fde047'
+        );
+        spawnConfetti(player.x + player.width / 2, player.y, 26);
+
+        playTone(440, 0.12, 'triangle', 0.08);
+        setTimeout(() => playTone(554.37, 0.12, 'triangle', 0.08), 95);
+        setTimeout(() => playTone(659.25, 0.22, 'triangle', 0.09), 190);
+
+        const landingX = floorData.isOdd
+          ? floorData.stairs.x - 18
+          : floorData.stairs.x + floorData.stairs.width - player.width + 18;
+        player.x = landingX;
+        player.y = SECOND_FLOOR_Y - player.height;
+        player.vx = 0;
+        player.vy = 0;
+        player.facing = nextFloorData.dir;
+        player.state = PlayerState.ON_GROUND;
+        player.floor = 1;
+        player.onStairs = false;
+        player.grounded = true;
+        player.isJumping = false;
+        player.jumpHoldTimer = 0;
+
+        transition = {
+          timer: 0,
+          oldFloor: floorData,
+          nextFloor: nextFloorData,
+          sinkingReds: redChars.map((rc) => ({ ...rc })),
+          droppedThudPlayed: false,
+          appearChimePlayed: false,
+        };
+
+        blackHoles = [];
+        redChars = [];
+        gamePhase = GamePhase.TRANSITIONING;
+      }
+
+      // ============================================================
+      // SPAWN RED CHARACTER (with random note in 三和弦 / 七和弦 mode)
+      // ============================================================
+      function spawnRedCharacter() {
+        const dir = floorData.dir;
+        const spawnX = dir === 1 ? 842 : 118;
+        const holeY = GROUND_CEILING_Y + 34;
+        const note = isChordMode() ? pickRedNote() : null;
+
+        createBlackHole(spawnX, holeY, 24, () => {
+          redChars.push({
+            x: spawnX - 13,
+            y: holeY - 14,
+            width: 26,
+            height: 28,
+            vx: 0,
+            vy: 40,
+            walkDir: -dir,
+            floorY: GROUND_Y,
+            landed: false,
+            walkCycle: 0,
+            note,
+          });
+        });
+      }
+
+      // ============================================================
+      // INPUT HANDLING (HOLD-TO-JUMP + STRICT DOUBLE-TAP STATE MACHINE)
+      // ============================================================
+      function handleSpaceDown() {
+        const now = performance.now();
+        const elapsedSinceLastTap = now - lastSpaceTapTime;
+
+        const isDoubleTap =
+          elapsedSinceLastTap <= DOUBLE_TAP_WINDOW_MS &&
+          lastSpaceHoldDuration < DOUBLE_TAP_MAX_FIRST_HOLD_MS;
+
+        if (isDoubleTap) {
+          lastSpaceTapTime = -Infinity;
+          spacePressStartTime = -Infinity;
+          player.isJumping = false;
+          player.jumpHoldTimer = 0;
+          ignoreSpaceHoldUntilRelease = true;
+
+          if (player.state === PlayerState.ON_GROUND) {
+            player.state = PlayerState.HANGING;
+            player.hangingAnchored = false;
+            player.onStairs = false;
+            player.grounded = false;
+            player.vx = 0;
+            player.vy = 0;
+            playTone(360, 0.14, 'triangle', 0.08, 660);
+          } else {
+            player.state = PlayerState.ON_GROUND;
+            player.hangingAnchored = false;
+            player.grounded = false;
+            player.vy = 20;
+            playTone(340, 0.12, 'triangle', 0.07, 170);
+          }
+          return;
+        }
+
+        lastSpaceTapTime = now;
+        spacePressStartTime = now;
+        lastSpaceHoldDuration = 0;
+        ignoreSpaceHoldUntilRelease = false;
+
+        if (player.state === PlayerState.HANGING) {
+          return;
+        }
+
+        if (player.grounded && !player.onStairs) {
+          player.vy = JUMP_INITIAL_VY;
+          player.grounded = false;
+          player.isJumping = true;
+          player.jumpHoldTimer = 0;
+          player.squashX = 0.84;
+          player.squashY = 1.2;
+          playTone(300, 0.11, 'sine', 0.07, 460);
+        }
+      }
+
+      function handleSpaceUp() {
+        const now = performance.now();
+        if (spacePressStartTime > 0) {
+          lastSpaceHoldDuration = now - spacePressStartTime;
+        }
+        ignoreSpaceHoldUntilRelease = false;
+
+        if (player.state === PlayerState.ON_GROUND && player.isJumping) {
+          player.isJumping = false;
+          if (player.vy < JUMP_RELEASE_CUT_VY) {
+            player.vy = Math.max(player.vy * 0.15, JUMP_RELEASE_CUT_VY);
+          }
+        }
+      }
+
+      window.addEventListener('keydown', (e) => {
+        if (
+          e.code === 'Space' ||
+          e.code === 'ArrowUp' ||
+          e.code === 'ArrowDown' ||
+          e.code === 'ArrowLeft' ||
+          e.code === 'ArrowRight'
+        ) {
+          e.preventDefault();
+        }
+
+        if (e.code === 'KeyR' && !e.repeat) {
+          resetLevel();
+          return;
+        }
+
+        if (e.code === 'Enter' && !e.repeat && gamePhase === GamePhase.PIT_DEAD) {
+          retryCurrentFloor();
+          return;
+        }
+
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') kbKeys.left = true;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') kbKeys.right = true;
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') kbKeys.up = true;
+        if (e.code === 'ArrowDown' || e.code === 'KeyS') kbKeys.down = true;
+
+        if (e.code === 'Space') {
+          if (e.repeat) return;
+          kbKeys.space = true;
+          syncKeys();
+          if (gamePhase === GamePhase.PLAYING && !isPortraitBlocked) {
+            handleSpaceDown();
+          }
+          return;
+        }
+        syncKeys();
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') kbKeys.left = false;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') kbKeys.right = false;
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') kbKeys.up = false;
+        if (e.code === 'ArrowDown' || e.code === 'KeyS') kbKeys.down = false;
+
+        if (e.code === 'Space') {
+          kbKeys.space = false;
+          syncKeys();
+          if (!keys.space) {
+            handleSpaceUp();
+          }
+          return;
+        }
+        syncKeys();
+      });
+
+      canvas.addEventListener('click', () => {
+        if (gamePhase === GamePhase.PIT_DEAD && !isPortraitBlocked) {
+          retryCurrentFloor();
+        }
+      });
+
+      function clearAllInputs() {
+        kbKeys.left = kbKeys.right = kbKeys.up = kbKeys.down = kbKeys.space = false;
+        touchKeys.left = touchKeys.right = touchKeys.up = touchKeys.down = touchKeys.space = false;
+        syncKeys();
+        resetMoveWheelVisuals();
+        if (spaceWheelEl) spaceWheelEl.classList.remove('pressed');
+      }
+
+      window.addEventListener('blur', clearAllInputs);
+
+      // ============================================================
+      // MOBILE LANDSCAPE & VIRTUAL TRANSPARENT WHEEL CONTROLS
+      // ============================================================
+      const mobileControlsEl = document.getElementById('mobileControls');
+      const moveWheelEl = document.getElementById('moveWheel');
+      const moveKnobEl = document.getElementById('moveKnob');
+      const dirUpEl = document.getElementById('dirUp');
+      const dirDownEl = document.getElementById('dirDown');
+      const dirLeftEl = document.getElementById('dirLeft');
+      const dirRightEl = document.getElementById('dirRight');
+      const spaceWheelEl = document.getElementById('spaceWheel');
+      const spaceSubEl = document.getElementById('spaceSub');
+      const rotateOverlayEl = document.getElementById('rotateOverlay');
+      const rotateDismissEl = document.getElementById('rotateDismiss');
+      const mobileRestartBtn = document.getElementById('mobileRestartBtn');
+
+      let movePointerId = null;
+      let spacePointerId = null;
+
+      function resetMoveWheelVisuals() {
+        if (!moveKnobEl) return;
+        moveKnobEl.style.transform = 'translate(0px, 0px)';
+        moveWheelEl.classList.remove('active');
+        dirUpEl.classList.remove('active');
+        dirDownEl.classList.remove('active');
+        dirLeftEl.classList.remove('active');
+        dirRightEl.classList.remove('active');
+      }
+
+      function tryLockLandscape() {
+        try {
+          if (screen.orientation && typeof screen.orientation.lock === 'function') {
+            screen.orientation.lock('landscape').catch(() => {});
+          }
+        } catch (_) {
+          // Browsers outside fullscreen often reject orientation lock; rotate prompt handles fallback
+        }
+      }
+
+      let lastMobileInActive = null;
+      let lastMobileHanging = null;
+      let lastPortraitBlocked = null;
+
+      function syncMobileUI() {
+        document.body.classList.toggle('mobile-mode', isMobileDevice);
+
+        const isPortrait = window.innerHeight > window.innerWidth;
+        isPortraitBlocked = isMobileDevice && isPortrait && !rotateDismissed;
+        if (isPortraitBlocked !== lastPortraitBlocked) {
+          lastPortraitBlocked = isPortraitBlocked;
+          rotateOverlayEl.classList.toggle('visible', isPortraitBlocked);
+        }
+
+        // Reset rotateDismissed once the user rotates to landscape
+        if (!isPortrait) {
+          rotateDismissed = false;
+        }
+
+        // Show transparent wheels whenever on mobile and actively in game mode
+        const inActiveGame =
+          isMobileDevice &&
+          !isPortraitBlocked &&
+          (gamePhase === GamePhase.PLAYING ||
+            gamePhase === GamePhase.SPAWNING ||
+            gamePhase === GamePhase.TRANSITIONING);
+
+        if (inActiveGame !== lastMobileInActive) {
+          lastMobileInActive = inActiveGame;
+          mobileControlsEl.classList.toggle('visible', inActiveGame);
+          mobileControlsEl.setAttribute('aria-hidden', String(!inActiveGame));
+
+          if (!inActiveGame) {
+            if (touchKeys.left || touchKeys.right || touchKeys.up || touchKeys.down || touchKeys.space) {
+              touchKeys.left = touchKeys.right = touchKeys.up = touchKeys.down = touchKeys.space = false;
+              syncKeys();
+              resetMoveWheelVisuals();
+              spaceWheelEl.classList.remove('pressed');
+            }
+            movePointerId = null;
+            spacePointerId = null;
+          }
+        }
+
+        // Visual feedback on right wheel when HANGING
+        const isHanging = player.state === PlayerState.HANGING;
+        if (isHanging !== lastMobileHanging) {
+          lastMobileHanging = isHanging;
+          spaceWheelEl.classList.toggle('hanging', isHanging);
+          spaceSubEl.textContent = isHanging ? '2× DROP' : 'HOLD / 2×';
+        }
+      }
+
+      // Enable mobile controls automatically if a real touch pointer is detected
+      window.addEventListener(
+        'pointerdown',
+        (e) => {
+          if (e.pointerType === 'touch' && !isMobileDevice) {
+            isMobileDevice = true;
+            syncMobileUI();
+          }
+          if (isMobileDevice) {
+            getAudio();
+            tryLockLandscape();
+          }
+        },
+        { passive: true }
+      );
+
+      window.addEventListener('resize', syncMobileUI);
+      window.addEventListener('orientationchange', () => {
+        setTimeout(syncMobileUI, 60);
+      });
+
+      rotateDismissEl.addEventListener('click', () => {
+        rotateDismissed = true;
+        tryLockLandscape();
+        syncMobileUI();
+      });
+
+      mobileRestartBtn.addEventListener('click', () => {
+        mobileRestartBtn.blur();
+        resetLevel();
+      });
+
+      // Left wheel: Up / Down / Left / Right directional control
+      function updateMoveWheelFromPointer(clientX, clientY) {
+        const rect = moveWheelEl.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = clientX - cx;
+        const dy = clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        const maxR = rect.width * 0.34;
+        const clamped = Math.min(dist, maxR);
+        const angle = Math.atan2(dy, dx);
+        const kx = dist > 0.5 ? Math.cos(angle) * clamped : 0;
+        const ky = dist > 0.5 ? Math.sin(angle) * clamped : 0;
+
+        moveKnobEl.style.transform = `translate(${kx.toFixed(1)}px, ${ky.toFixed(1)}px)`;
+        moveWheelEl.classList.add('active');
+
+        const deadzone = 12;
+        const left = dx < -deadzone && Math.abs(dx) >= Math.abs(dy) * 0.42;
+        const right = dx > deadzone && Math.abs(dx) >= Math.abs(dy) * 0.42;
+        const up = dy < -deadzone && Math.abs(dy) >= Math.abs(dx) * 0.52;
+        const down = dy > deadzone && Math.abs(dy) >= Math.abs(dx) * 0.52;
+
+        touchKeys.left = left;
+        touchKeys.right = right;
+        touchKeys.up = up;
+        touchKeys.down = down;
+        syncKeys();
+
+        dirLeftEl.classList.toggle('active', left);
+        dirRightEl.classList.toggle('active', right);
+        dirUpEl.classList.toggle('active', up);
+        dirDownEl.classList.toggle('active', down);
+      }
+
+      moveWheelEl.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (movePointerId !== null) return;
+        movePointerId = e.pointerId;
+        try {
+          moveWheelEl.setPointerCapture(e.pointerId);
+        } catch (_) {}
+        updateMoveWheelFromPointer(e.clientX, e.clientY);
+      });
+
+      moveWheelEl.addEventListener('pointermove', (e) => {
+        if (e.pointerId !== movePointerId) return;
+        e.preventDefault();
+        updateMoveWheelFromPointer(e.clientX, e.clientY);
+      });
+
+      function releaseMoveWheel(e) {
+        if (e.pointerId !== movePointerId) return;
+        movePointerId = null;
+        touchKeys.left = false;
+        touchKeys.right = false;
+        touchKeys.up = false;
+        touchKeys.down = false;
+        syncKeys();
+        resetMoveWheelVisuals();
+      }
+
+      moveWheelEl.addEventListener('pointerup', releaseMoveWheel);
+      moveWheelEl.addEventListener('pointercancel', releaseMoveWheel);
+      moveWheelEl.addEventListener('lostpointercapture', releaseMoveWheel);
+
+      // Right wheel: Space bar (Hold-to-Jump + Double-Tap-to-Hang/Drop)
+      spaceWheelEl.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (spacePointerId !== null) return;
+        spacePointerId = e.pointerId;
+        try {
+          spaceWheelEl.setPointerCapture(e.pointerId);
+        } catch (_) {}
+        getAudio();
+        spaceWheelEl.classList.add('pressed');
+        touchKeys.space = true;
+        syncKeys();
+        if (gamePhase === GamePhase.PLAYING && !isPortraitBlocked) {
+          handleSpaceDown();
+        }
+      });
+
+      function releaseSpaceWheel(e) {
+        if (e.pointerId !== spacePointerId) return;
+        spacePointerId = null;
+        spaceWheelEl.classList.remove('pressed');
+        touchKeys.space = false;
+        syncKeys();
+        if (!keys.space) {
+          handleSpaceUp();
+        }
+      }
+
+      spaceWheelEl.addEventListener('pointerup', releaseSpaceWheel);
+      spaceWheelEl.addEventListener('pointercancel', releaseSpaceWheel);
+      spaceWheelEl.addEventListener('lostpointercapture', releaseSpaceWheel);
+
+      // ============================================================
+      // TOOLBAR UI WIRING
+      // ============================================================
+      const modeButtons = document.querySelectorAll('.mode-btn');
+      const chordControlsEl = document.getElementById('chordControls');
+      const keySelectEl = document.getElementById('keySelect');
+      const hintToggleEl = document.getElementById('hintToggle');
+      const listenBtnEl = document.getElementById('listenBtn');
+
+      keySelectEl.innerHTML = KEYS.map((k) => `<option value="${k}">${fmtN(k)} 大調</option>`).join('');
+      keySelectEl.value = currentKeyName;
+
+      function setGameMode(nextMode) {
+        gameMode = nextMode;
+        modeButtons.forEach((b) => b.classList.toggle('active', b.dataset.mode === nextMode));
+        chordControlsEl.classList.toggle('hidden', !isChordMode());
+        resetLevel();
+      }
+
+      modeButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          btn.blur();
+          setGameMode(btn.dataset.mode);
+        });
+      });
+
+      keySelectEl.addEventListener('change', () => {
+        currentKeyName = keySelectEl.value;
+        currentKey = buildKey(currentKeyName);
+        keySelectEl.blur();
+        if (isChordMode()) {
+          resetLevel();
+        }
+      });
+
+      hintToggleEl.addEventListener('change', () => {
+        showChordHint = hintToggleEl.checked;
+        hintToggleEl.blur();
+      });
+
+      listenBtnEl.addEventListener('click', () => {
+        listenBtnEl.blur();
+        if (isChordMode() && chordState.degree) {
+          bassTone(chordState.degree.triadHz[0], 0, 0.75, 0.24);
+        }
+      });
+
+      // ============================================================
+      // UPDATE LOGIC
+      // ============================================================
+      function updateBlackHoles(dt) {
+        for (let i = blackHoles.length - 1; i >= 0; i--) {
+          const bh = blackHoles[i];
+          bh.age += dt;
+          const total = bh.openDuration + bh.holdDuration + bh.closeDuration;
+
+          if (bh.age < bh.openDuration) {
+            const t = bh.age / bh.openDuration;
+            bh.radius = bh.maxRadius * (1 - Math.pow(1 - t, 3));
+          } else if (bh.age < bh.openDuration + bh.holdDuration) {
+            bh.radius = bh.maxRadius;
+            if (!bh.released) {
+              bh.released = true;
+              if (bh.onRelease) bh.onRelease();
+            }
+          } else if (bh.age < total) {
+            const t = (bh.age - bh.openDuration - bh.holdDuration) / bh.closeDuration;
+            bh.radius = bh.maxRadius * (1 - t * t);
+          } else {
+            blackHoles.splice(i, 1);
+          }
+        }
+      }
+
+      function updateParticles(dt) {
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.life -= dt;
+          if (p.life <= 0) {
+            particles.splice(i, 1);
+            continue;
+          }
+          p.vy += p.gravity * dt;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+        }
+
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+          const ft = floatingTexts[i];
+          ft.life -= dt;
+          ft.y -= 34 * dt;
+          if (ft.life <= 0) floatingTexts.splice(i, 1);
+        }
+      }
+
+      function updateChordCelebration(dt) {
+        if (!chordState.celebrating) return;
+        chordState.celebrating.timer += dt;
+        if (chordState.celebrating.timer >= chordState.celebrating.duration) {
+          const prevIdx = chordState.celebrating.degree.i;
+          pickNewChordRoot(prevIdx, true);
+          // Give brief grace invulnerability so player can read the new root note
+          player.invulnTimer = Math.max(player.invulnTimer, 0.8);
+          spawnGrabSparkles(player.x + player.width / 2, player.y, '#fde047', 10);
+          addFloatingText(
+            player.x + player.width / 2,
+            player.y - 26,
+            `New Root: ${fmtN(chordState.degree.root)}`,
+            '#86efac'
+          );
+        }
+      }
+
+      function updateSpawningPlayer(dt) {
+        if (!player.visible) return;
+        player.vy += GRAVITY * dt;
+        player.y += player.vy * dt;
+
+        if (player.y + player.height >= GROUND_Y) {
+          player.y = GROUND_Y - player.height;
+          player.vy = 0;
+          player.grounded = true;
+          player.squashX = 1.28;
+          player.squashY = 0.76;
+          spawnDust(player.x + player.width / 2, GROUND_Y, 14, '#e6dcc5');
+          if (isChordMode() && chordState.degree) {
+            bassTone(chordState.degree.triadHz[0], 0, 0.65, 0.22);
+          } else {
+            playTone(150, 0.1, 'triangle', 0.09, 85);
+          }
+          gamePhase = GamePhase.PLAYING;
+        }
+      }
+
+      function updateTransition(dt) {
+        if (!transition) return;
+        transition.timer += dt;
+        const t = transition.timer;
+
+        player.squashX += (1 - player.squashX) * Math.min(1, dt * 14);
+        player.squashY += (1 - player.squashY) * Math.min(1, dt * 14);
+
+        if (t < TRANS_SINK_DUR) {
+          player.y = SECOND_FLOOR_Y - player.height;
+          if (Math.random() < dt * 16) {
+            spawnDust(80 + Math.random() * (W - 160), H - 14, 2, '#d6cbb3');
+          }
+        } else if (t < TRANS_SINK_DUR + TRANS_DROP_DUR) {
+          const p = easeInOutCubic(clamp01((t - TRANS_SINK_DUR) / TRANS_DROP_DUR));
+          const curY = lerp(SECOND_FLOOR_Y, GROUND_Y, p);
+          player.y = curY - player.height;
+        } else {
+          if (!transition.droppedThudPlayed) {
+            transition.droppedThudPlayed = true;
+            player.y = GROUND_Y - player.height;
+            player.squashX = 1.24;
+            player.squashY = 0.8;
+            spawnDust(player.x + player.width / 2, GROUND_Y, 12, '#e6dcc5');
+            playTone(130, 0.12, 'triangle', 0.09, 75);
+          }
+          if (!transition.appearChimePlayed) {
+            transition.appearChimePlayed = true;
+            playTone(392, 0.14, 'sine', 0.06, 523.25);
+          }
+          player.y = GROUND_Y - player.height;
+        }
+
+        if (t >= TRANS_TOTAL_DUR) {
+          currentFloorNum = transition.nextFloor.floorNum;
+          floorData = transition.nextFloor;
+          transition = null;
+
+          player.y = GROUND_Y - player.height;
+          player.floor = 0;
+          player.grounded = true;
+          player.state = PlayerState.ON_GROUND;
+          player.vx = 0;
+          player.vy = 0;
+          player.facing = floorData.dir;
+
+          redSpawnTimer = isChordMode() ? 1.5 : randomRedInterval();
+          gamePhase = GamePhase.PLAYING;
+        }
+      }
+
+      function updatePlayer(dt) {
+        player.squashX += (1 - player.squashX) * Math.min(1, dt * 14);
+        player.squashY += (1 - player.squashY) * Math.min(1, dt * 14);
+
+        if (player.invulnTimer > 0) player.invulnTimer = Math.max(0, player.invulnTimer - dt);
+        if (player.redFlashTimer > 0) player.redFlashTimer = Math.max(0, player.redFlashTimer - dt);
+        if (player.goodFlashTimer > 0) player.goodFlashTimer = Math.max(0, player.goodFlashTimer - dt);
+
+        // STATE: HANGING
+        if (player.state === PlayerState.HANGING) {
+          player.vx = 0;
+          player.vy = 0;
+          player.isJumping = false;
+          player.grounded = false;
+
+          const targetY = getCeilingY(player.floor);
+          if (player.y > targetY) {
+            player.y = Math.max(targetY, player.y - HANG_ZIP_SPEED * dt);
+            if (player.y === targetY && !player.hangingAnchored) {
+              player.hangingAnchored = true;
+              player.squashX = 1.15;
+              player.squashY = 0.88;
+              spawnGrabSparkles(player.x + player.width / 2, targetY);
+            }
+          } else {
+            player.y = targetY;
+            player.hangingAnchored = true;
+          }
+          return;
+        }
+
+        // STATE: ON_GROUND
+        const st = floorData.stairs;
+
+        if (keys.up && isNearStairs() && !player.onStairs) {
+          player.onStairs = true;
+          player.isJumping = false;
+          player.grounded = false;
+          player.vy = 0;
+        }
+
+        if (player.onStairs) {
+          const stairsCenterX = st.x + st.width / 2 - player.width / 2;
+          player.x += (stairsCenterX - player.x) * Math.min(1, dt * 12);
+
+          if (keys.up) {
+            player.y -= CLIMB_SPEED * dt;
+            player.walkCycle += dt * 12;
+          } else if (keys.down) {
+            player.y += CLIMB_SPEED * dt;
+            player.walkCycle += dt * 10;
+          }
+
+          if (player.y + player.height >= GROUND_Y) {
+            player.y = GROUND_Y - player.height;
+            if (keys.left || keys.right || !keys.up) {
+              player.onStairs = false;
+              player.grounded = true;
+            }
+          }
+
+          if (player.y + player.height <= SECOND_FLOOR_Y) {
+            beginFloorTransition();
+          }
+          return;
+        }
+
+        // Horizontal movement: player-controlled ONLY
+        let moveDir = 0;
+        if (keys.left) moveDir -= 1;
+        if (keys.right) moveDir += 1;
+
+        player.vx = moveDir * MOVE_SPEED;
+        if (moveDir !== 0) {
+          player.facing = moveDir;
+          if (player.grounded) {
+            player.walkCycle += dt * 14;
+          }
+        } else {
+          player.walkCycle = 0;
+        }
+
+        const prevX = player.x;
+        player.x += player.vx * dt;
+
+        if (player.x < 4) player.x = 4;
+        if (player.x + player.width > W - 4) player.x = W - 4 - player.width;
+
+        if (player.floor === 0 && player.y + player.height > GROUND_Y + 4) {
+          for (const seg of floorData.groundSegments) {
+            if (player.x + player.width > seg.x && player.x < seg.x + seg.width) {
+              if (prevX + player.width <= seg.x + 2) {
+                player.x = seg.x - player.width;
+              } else if (prevX >= seg.x + seg.width - 2) {
+                player.x = seg.x + seg.width;
+              }
+            }
+          }
+        }
+
+        if (player.floor === 0) {
+          for (const stone of floorData.stones) {
+            if (rectsOverlap(player, stone)) {
+              if (prevX + player.width <= stone.x + 2) {
+                player.x = stone.x - player.width;
+              } else if (prevX >= stone.x + stone.width - 2) {
+                player.x = stone.x + stone.width;
+              }
+            }
+          }
+        }
+
+        // Vertical physics (Hold-to-Jump)
+        if (player.isJumping && keys.space && !ignoreSpaceHoldUntilRelease) {
+          player.jumpHoldTimer += dt;
+          if (player.jumpHoldTimer <= JUMP_BOOST_DURATION) {
+            player.vy += JUMP_BOOST_GRAVITY * dt;
+          } else if (player.jumpHoldTimer <= JUMP_GLIDE_MAX_HOLD) {
+            player.vy += JUMP_GLIDE_GRAVITY * dt;
+          } else {
+            player.isJumping = false;
+            player.vy += GRAVITY * dt;
+          }
+        } else {
+          player.isJumping = false;
+          player.vy += GRAVITY * dt;
+        }
+
+        const prevY = player.y;
+        const wasGrounded = player.grounded;
+        player.y += player.vy * dt;
+        player.grounded = false;
+
+        const ceilingY = getCeilingY(player.floor);
+        if (player.y < ceilingY) {
+          player.y = ceilingY;
+          if (player.vy < 0) player.vy = 0;
+          player.isJumping = false;
+        }
+
+        if (player.floor === 0 && player.vy >= 0) {
+          for (const stone of floorData.stones) {
+            const horizOverlap =
+              player.x + player.width - 3 > stone.x &&
+              player.x + 3 < stone.x + stone.width;
+            if (
+              horizOverlap &&
+              prevY + player.height <= stone.y + 6 &&
+              player.y + player.height >= stone.y
+            ) {
+              player.y = stone.y - player.height;
+              if (!wasGrounded && player.vy > 140) {
+                spawnDust(player.x + player.width / 2, stone.y, 7, '#cbd5e1');
+                player.squashX = 1.18;
+                player.squashY = 0.84;
+              }
+              player.vy = 0;
+              player.grounded = true;
+              player.isJumping = false;
+            }
+          }
+        }
+
+        if (player.floor === 0 && player.vy >= 0 && !player.grounded) {
+          if (
+            isOverSolidGround(player.x, player.width) &&
+            prevY + player.height <= GROUND_Y + 8 &&
+            player.y + player.height >= GROUND_Y
+          ) {
+            player.y = GROUND_Y - player.height;
+            if (!wasGrounded && player.vy > 120) {
+              spawnDust(player.x + player.width / 2, GROUND_Y, 10, '#e6dcc5');
+              player.squashX = 1.22;
+              player.squashY = 0.82;
+              playTone(145, 0.07, 'triangle', 0.06, 90);
+            }
+            player.vy = 0;
+            player.grounded = true;
+            player.isJumping = false;
+          }
+        }
+
+        if (player.y > H + 24) {
+          gamePhase = GamePhase.PIT_DEAD;
+          playTone(220, 0.32, 'sawtooth', 0.08, 70);
+        }
+      }
+
+      function handleRedCollision(rc, index) {
+        // Normal mode: every red character deducts 10 points
+        if (!isChordMode()) {
+          if (player.invulnTimer > 0) return;
+          score = Math.max(0, score - 10);
+          player.invulnTimer = INVULN_DURATION;
+          player.redFlashTimer = 0.45;
+          scoreFlashTimer = 0.5;
+          addFloatingText(player.x + player.width / 2, player.y - 8, '-10', '#ef4444');
+          playTone(190, 0.16, 'square', 0.07, 110);
+          return;
+        }
+
+        // During chord celebration, ignore collisions gracefully
+        if (chordState.celebrating) return;
+
+        const expected = getExpectedNextNote();
+        if (rc.note === expected) {
+          // CORRECT NOTE COLLECTED!
+          redChars.splice(index, 1);
+          const collectedIdx = chordState.collectedCount;
+          chordState.collectedCount += 1;
+          player.goodFlashTimer = 0.35;
+          player.squashX = 1.2;
+          player.squashY = 0.85;
+          spawnGrabSparkles(rc.x + rc.width / 2, rc.y + rc.height / 2, '#fde047', 12);
+
+          const deg = chordState.degree;
+          const hzList = gameMode === GameMode.SEVENTH ? deg.seventhHz : deg.triadHz;
+
+          if (chordState.collectedCount >= chordState.targetNotes.length) {
+            // FULL CHORD COMPLETED -> SCORE + PLAY CHORD NOTES + SWITCH ROOT!
+            const bonus = gameMode === GameMode.SEVENTH ? 40 : 30;
+            score += bonus;
+            scoreGoodFlashTimer = 0.6;
+            chordState.chordsCleared += 1;
+            player.invulnTimer = 1.45;
+
+            const title = getChordTitle(deg, gameMode);
+            const spelled = chordState.targetNotes.map(fmtN).join('');
+            addFloatingText(
+              player.x + player.width / 2,
+              player.y - 26,
+              `${title.short} (${spelled})! +${bonus}`,
+              '#fde047'
+            );
+            spawnConfetti(player.x + player.width / 2, player.y - 8, 36);
+
+            // Play the 3 (or 4) notes + full chord using BassChord-local bass synth!
+            playCompletedChord(deg, gameMode);
+
+            const celebDur = gameMode === GameMode.SEVENTH ? 1.45 : 1.25;
+            chordState.celebrating = {
+              degree: deg,
+              notes: chordState.targetNotes.slice(),
+              mode: gameMode,
+              timer: 0,
+              duration: celebDur,
+            };
+          } else {
+            // Intermediate chord tone collected (e.g. "E" on the way to "C E G")
+            player.invulnTimer = Math.max(player.invulnTimer, 0.35);
+            bassTone(hzList[collectedIdx], 0, 0.55, 0.24);
+            addFloatingText(
+              player.x + player.width / 2,
+              player.y - 22,
+              `✓ ${fmtN(rc.note)}`,
+              '#4ade80'
+            );
+          }
+          return;
+        }
+
+        // WRONG NOTE! Penalty (-10, red flash, 1s invulnerability)
+        if (player.invulnTimer > 0) return;
+        score = Math.max(0, score - 10);
+        player.invulnTimer = INVULN_DURATION;
+        player.redFlashTimer = 0.45;
+        scoreFlashTimer = 0.5;
+        addFloatingText(
+          player.x + player.width / 2,
+          player.y - 18,
+          `✗ ${fmtN(rc.note)}  -10`,
+          '#ef4444'
+        );
+        playTone(170, 0.18, 'square', 0.07, 95);
+      }
+
+      function updateRedCharacters(dt) {
+        if (gamePhase === GamePhase.PLAYING) {
+          redSpawnTimer -= dt;
+          if (redSpawnTimer <= 0) {
+            spawnRedCharacter();
+            redSpawnTimer = randomRedInterval();
+          }
+        }
+
+        for (let i = redChars.length - 1; i >= 0; i--) {
+          const rc = redChars[i];
+
+          if (!rc.landed) {
+            rc.vy += GRAVITY * dt;
+            rc.y += rc.vy * dt;
+            if (rc.y + rc.height >= rc.floorY) {
+              rc.y = rc.floorY - rc.height;
+              rc.vy = 0;
+              rc.landed = true;
+              rc.vx = rc.walkDir * RED_WALK_SPEED;
+              spawnDust(rc.x + rc.width / 2, rc.floorY, 7, '#fca5a5');
+            }
+          } else {
+            rc.x += rc.vx * dt;
+            rc.walkCycle += dt * 13;
+          }
+
+          if (rc.x < -rc.width - 12 || rc.x > W + 12) {
+            redChars.splice(i, 1);
+            continue;
+          }
+
+          if (gamePhase === GamePhase.PLAYING && rectsOverlap(player, rc)) {
+            handleRedCollision(rc, i);
+          }
+        }
+      }
+
+      function update(dt) {
+        gameTime += dt;
+        controlsBannerTimer += dt;
+        if (scoreFlashTimer > 0) scoreFlashTimer = Math.max(0, scoreFlashTimer - dt);
+        if (scoreGoodFlashTimer > 0) scoreGoodFlashTimer = Math.max(0, scoreGoodFlashTimer - dt);
+
+        for (const c of clouds) {
+          c.x += c.speed * dt;
+          if (c.x > W + 90) c.x = -90;
+        }
+
+        updateBlackHoles(dt);
+        updateParticles(dt);
+
+        if (gamePhase === GamePhase.SPAWNING) {
+          updateSpawningPlayer(dt);
+        } else if (gamePhase === GamePhase.PLAYING) {
+          updateChordCelebration(dt);
+          updatePlayer(dt);
+          updateRedCharacters(dt);
+        } else if (gamePhase === GamePhase.TRANSITIONING) {
+          updateChordCelebration(dt);
+          updateTransition(dt);
+        }
+      }
+
+      // ============================================================
+      // RENDERING
+      // ============================================================
+      function drawRoundedRect(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      function drawBackground() {
+        const pal = SKY_PALETTES[(currentFloorNum - 1) % SKY_PALETTES.length];
+        const sky = ctx.createLinearGradient(0, 0, 0, H);
+        sky.addColorStop(0, pal[0]);
+        sky.addColorStop(0.65, pal[1]);
+        sky.addColorStop(1, pal[2]);
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(254, 240, 138, 0.28)';
+        ctx.beginPath();
+        ctx.arc(860, 82, 46, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = pal[3];
+        ctx.beginPath();
+        ctx.arc(860, 82, 26, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        for (const c of clouds) {
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.scale(c.scale, c.scale);
+          ctx.beginPath();
+          ctx.arc(0, 0, 20, 0, Math.PI * 2);
+          ctx.arc(22, -6, 24, 0, Math.PI * 2);
+          ctx.arc(46, 0, 18, 0, Math.PI * 2);
+          ctx.arc(22, 6, 18, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.fillStyle = 'rgba(134, 239, 172, 0.24)';
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.quadraticCurveTo(180, 350, 380, GROUND_Y);
+        ctx.quadraticCurveTo(600, 330, 840, GROUND_Y);
+        ctx.lineTo(W, GROUND_Y);
+        ctx.lineTo(W, H);
+        ctx.lineTo(0, H);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawTopRoof() {
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(0, 0, W, TOP_ROOF_Y);
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, TOP_ROOF_Y - 3, W, 3);
+      }
+
+      function drawGroundSegmentsAndPits(fd, offsetY = 0) {
+        ctx.save();
+        ctx.translate(0, offsetY);
+
+        for (const pit of fd.pits) {
+          const pitGrad = ctx.createLinearGradient(0, GROUND_Y, 0, H);
+          pitGrad.addColorStop(0, 'rgba(15, 23, 42, 0.22)');
+          pitGrad.addColorStop(1, 'rgba(15, 23, 42, 0.72)');
+          ctx.fillStyle = pitGrad;
+          ctx.fillRect(pit.x, GROUND_Y, pit.width, H - GROUND_Y);
+        }
+
+        for (const seg of fd.groundSegments) {
+          const dirtGrad = ctx.createLinearGradient(0, GROUND_Y, 0, H);
+          dirtGrad.addColorStop(0, '#925c33');
+          dirtGrad.addColorStop(1, '#6b3e1f');
+          ctx.fillStyle = dirtGrad;
+          ctx.fillRect(seg.x, GROUND_Y, seg.width, H - GROUND_Y);
+
+          ctx.fillStyle = 'rgba(67, 36, 14, 0.25)';
+          for (let px = seg.x + 14; px < seg.x + seg.width - 12; px += 34) {
+            ctx.beginPath();
+            ctx.arc(px, GROUND_Y + 26 + ((px * 7) % 28), 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.fillStyle = '#4ade80';
+          ctx.fillRect(seg.x, GROUND_Y, seg.width, 11);
+          ctx.fillStyle = '#22c55e';
+          ctx.fillRect(seg.x, GROUND_Y + 9, seg.width, 5);
+
+          ctx.strokeStyle = '#3f230f';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          if (seg.x > 0) {
+            ctx.moveTo(seg.x, GROUND_Y);
+            ctx.lineTo(seg.x, H);
+          }
+          if (seg.x + seg.width < W) {
+            ctx.moveTo(seg.x + seg.width, GROUND_Y);
+            ctx.lineTo(seg.x + seg.width, H);
+          }
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      function drawStonesList(stones, offsetY = 0, scaleY = 1) {
+        ctx.save();
+        ctx.translate(0, offsetY);
+        for (const s of stones) {
+          const drawnH = s.height * scaleY;
+          const drawnY = GROUND_Y - drawnH;
+
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.22)';
+          ctx.beginPath();
+          ctx.ellipse(s.x + s.width / 2, GROUND_Y + 2, s.width * 0.56, 4, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (drawnH < 2) continue;
+
+          ctx.beginPath();
+          ctx.moveTo(s.x + 2, drawnY + drawnH);
+          ctx.lineTo(s.x, drawnY + drawnH * 0.45);
+          ctx.lineTo(s.x + s.width * 0.22, drawnY + 3 * scaleY);
+          ctx.lineTo(s.x + s.width * 0.68, drawnY);
+          ctx.lineTo(s.x + s.width, drawnY + drawnH * 0.42);
+          ctx.lineTo(s.x + s.width - 2, drawnY + drawnH);
+          ctx.closePath();
+
+          const grad = ctx.createLinearGradient(s.x, drawnY, s.x, drawnY + drawnH);
+          grad.addColorStop(0, '#94a3b8');
+          grad.addColorStop(1, '#475569');
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(226, 232, 240, 0.45)';
+          ctx.beginPath();
+          ctx.moveTo(s.x + s.width * 0.24, drawnY + 5 * scaleY);
+          ctx.lineTo(s.x + s.width * 0.62, drawnY + 3 * scaleY);
+          ctx.lineTo(s.x + s.width * 0.48, drawnY + drawnH * 0.42);
+          ctx.lineTo(s.x + s.width * 0.14, drawnY + drawnH * 0.38);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawUpperPlatformAndCeiling(fd, offsetY = 0, beamAlpha = 1) {
+        ctx.save();
+        ctx.translate(0, offsetY);
+
+        const cb = fd.ceilingBeam;
+        if (beamAlpha > 0.01) {
+          ctx.save();
+          ctx.globalAlpha = beamAlpha;
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(cb.x, cb.y, cb.width, cb.height);
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(cb.x, cb.y + cb.height - 3, cb.width, 3);
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillRect(cb.x, cb.y, cb.width, 2);
+
+          ctx.fillStyle = '#cbd5e1';
+          for (let rx = cb.x + 16; rx < cb.x + cb.width - 8; rx += 32) {
+            ctx.fillRect(rx, cb.y + 4, 4, 2);
+          }
+          ctx.restore();
+        }
+
+        const sf = fd.secondFloor;
+        ctx.fillStyle = '#7c5334';
+        ctx.fillRect(sf.x, sf.y, sf.width, sf.height);
+
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(sf.x, sf.y + sf.height - 6, sf.width, 6);
+
+        ctx.fillStyle = '#4ade80';
+        ctx.fillRect(sf.x, sf.y, sf.width, 9);
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(sf.x, sf.y + 8, sf.width, 4);
+
+        ctx.strokeStyle = '#3b2413';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(sf.x, sf.y, sf.width, sf.height);
+
+        const railStart = fd.isOdd ? sf.x + 10 : sf.x + sf.width - 210;
+        const railEnd = railStart + 200;
+        ctx.strokeStyle = 'rgba(120, 74, 38, 0.7)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(railStart, sf.y - 26);
+        ctx.lineTo(railEnd, sf.y - 26);
+        ctx.stroke();
+        for (let px = railStart + 6; px <= railEnd - 4; px += 38) {
+          ctx.beginPath();
+          ctx.moveTo(px, sf.y - 26);
+          ctx.lineTo(px, sf.y);
+          ctx.stroke();
+        }
+
+        const flagX = fd.isOdd ? sf.x + 258 : sf.x + 232;
+        const flagBaseY = sf.y;
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(flagX, flagBaseY);
+        ctx.lineTo(flagX, flagBaseY - 64);
+        ctx.stroke();
+
+        const wave = Math.sin(gameTime * 5) * 3;
+        const flagDir = fd.isOdd ? 1 : -1;
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.moveTo(flagX + flagDir * 2, flagBaseY - 62);
+        ctx.lineTo(flagX + flagDir * 42, flagBaseY - 52 + wave);
+        ctx.lineTo(flagX + flagDir * 2, flagBaseY - 38);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(flagX, flagBaseY - 65, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        const badgeX = fd.isOdd ? sf.x + 318 : sf.x + 92;
+        ctx.save();
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.74)';
+        drawRoundedRect(badgeX, sf.y - 38, 76, 26, 6);
+        ctx.fill();
+        ctx.fillStyle = '#fde047';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`FLOOR ${fd.floorNum + 1}`, badgeX + 38, sf.y - 20);
+        ctx.restore();
+
+        ctx.restore();
+      }
+
+      function drawStairsObj(st, offsetY = 0, showPrompt = false) {
+        ctx.save();
+        ctx.translate(0, offsetY);
+
+        const stepCount = 10;
+        const stepH = (st.bottomY - st.topY) / stepCount;
+
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.14)';
+        ctx.fillRect(st.x + 3, st.topY, st.width, st.bottomY - st.topY);
+
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(st.x, st.topY, 6, st.bottomY - st.topY);
+        ctx.fillRect(st.x + st.width - 6, st.topY, 6, st.bottomY - st.topY);
+
+        for (let i = 0; i < stepCount; i++) {
+          const sy = st.topY + i * stepH + 6;
+          ctx.fillStyle = '#d97706';
+          ctx.fillRect(st.x + 4, sy, st.width - 8, 7);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(st.x + 4, sy, st.width - 8, 2.5);
+        }
+
+        if (showPrompt) {
+          const bob = Math.sin(gameTime * 6) * 4;
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+          drawRoundedRect(st.x - 16, st.bottomY - 78 + bob, 80, 24, 6);
+          ctx.fill();
+          ctx.fillStyle = '#fef08a';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('▲ W / Up', st.x + 24, st.bottomY - 62 + bob);
+        }
+
+        ctx.restore();
+      }
+
+      function drawBlackHoles() {
+        for (const bh of blackHoles) {
+          if (bh.radius <= 0.5) continue;
+          ctx.save();
+          ctx.translate(bh.x, bh.y);
+
+          const glow = ctx.createRadialGradient(0, 0, bh.radius * 0.4, 0, 0, bh.radius * 1.65);
+          glow.addColorStop(0, 'rgba(15, 23, 42, 0.95)');
+          glow.addColorStop(0.55, 'rgba(88, 28, 135, 0.65)');
+          glow.addColorStop(1, 'rgba(88, 28, 135, 0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(0, 0, bh.radius * 1.65, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.rotate(gameTime * 6.5);
+          for (let arm = 0; arm < 4; arm++) {
+            ctx.save();
+            ctx.rotate((arm * Math.PI) / 2);
+            ctx.strokeStyle = arm % 2 === 0 ? 'rgba(192, 132, 252, 0.85)' : 'rgba(56, 189, 248, 0.7)';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.arc(0, 0, bh.radius * 0.82, 0, Math.PI * 0.75);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          ctx.fillStyle = '#020617';
+          ctx.beginPath();
+          ctx.arc(0, 0, bh.radius * 0.68, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      }
+
+      function drawNoteBadge(x, y, text, bgColor, borderColor, textColor) {
+        ctx.save();
+        ctx.font = 'bold 15px sans-serif';
+        const tw = Math.max(24, ctx.measureText(text).width + 12);
+        const th = 22;
+        drawRoundedRect(x - tw / 2, y - th / 2, tw, th, 7);
+        ctx.fillStyle = bgColor;
+        ctx.fill();
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = textColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x, y + 1);
+        ctx.restore();
+      }
+
+      function drawRedCharacterList(list, offsetY = 0) {
+        ctx.save();
+        ctx.translate(0, offsetY);
+        for (const rc of list) {
+          ctx.save();
+          const cx = rc.x + rc.width / 2;
+          const cy = rc.y + rc.height / 2;
+          ctx.translate(cx, cy);
+
+          const step = rc.landed ? Math.sin(rc.walkCycle) * 3 : 0;
+          ctx.fillStyle = '#991b1b';
+          ctx.beginPath();
+          ctx.arc(-5 + step, rc.height / 2 - 1, 3.5, 0, Math.PI * 2);
+          ctx.arc(5 - step, rc.height / 2 - 1, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          drawRoundedRect(-rc.width / 2, -rc.height / 2, rc.width, rc.height - 2, 6);
+          ctx.fillStyle = '#ef4444';
+          ctx.fill();
+          ctx.strokeStyle = '#991b1b';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          const look = rc.walkDir || -1;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(-5, -3, 4.2, 0, Math.PI * 2);
+          ctx.arc(5, -3, 4.2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#111827';
+          ctx.beginPath();
+          ctx.arc(-5 + look * 1.4, -3, 2, 0, Math.PI * 2);
+          ctx.arc(5 + look * 1.4, -3, 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#7f1d1d';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-9, -8);
+          ctx.lineTo(-2, -6.5);
+          ctx.moveTo(9, -8);
+          ctx.lineTo(2, -6.5);
+          ctx.stroke();
+
+          ctx.restore();
+
+          // In 三和弦 / 七和弦 mode, draw the red man's note tag clearly above him
+          if (rc.note) {
+            drawNoteBadge(
+              cx,
+              rc.y - 16,
+              fmtN(rc.note),
+              '#ffffff',
+              '#b91c1c',
+              '#991b1b'
+            );
+          }
+        }
+        ctx.restore();
+      }
+
+      function drawTransitionWorld() {
+        const t = transition.timer;
+        const oldF = transition.oldFloor;
+        const nextF = transition.nextFloor;
+
+        if (t < TRANS_SINK_DUR) {
+          const sinkP = easeInQuad(clamp01(t / TRANS_SINK_DUR));
+          const sinkY = sinkP * 190;
+
+          drawUpperPlatformAndCeiling(oldF, 0, 1 - sinkP);
+          drawStairsObj(oldF.stairs, sinkY, false);
+          drawGroundSegmentsAndPits(oldF, sinkY);
+          drawStonesList(oldF.stones, sinkY, 1);
+          drawRedCharacterList(transition.sinkingReds, sinkY);
+          return;
+        }
+
+        if (t < TRANS_SINK_DUR + TRANS_DROP_DUR) {
+          const dropP = easeInOutCubic(clamp01((t - TRANS_SINK_DUR) / TRANS_DROP_DUR));
+          const sf = oldF.secondFloor;
+          const curY = lerp(SECOND_FLOOR_Y, GROUND_Y, dropP);
+          const curLeft = lerp(sf.x, 0, dropP);
+          const curRight = lerp(sf.x + sf.width, W, dropP);
+          const curW = curRight - curLeft;
+          const curH = lerp(SECOND_FLOOR_THICKNESS, H - GROUND_Y, dropP);
+
+          if (dropP < 0.72) {
+            const dirtGrad = ctx.createLinearGradient(0, curY, 0, curY + curH);
+            dirtGrad.addColorStop(0, '#925c33');
+            dirtGrad.addColorStop(1, '#6b3e1f');
+            ctx.fillStyle = dirtGrad;
+            ctx.fillRect(curLeft, curY, curW, curH);
+
+            ctx.fillStyle = '#4ade80';
+            ctx.fillRect(curLeft, curY, curW, 10);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(curLeft, curY + 9, curW, 4);
+
+            ctx.strokeStyle = '#3b2413';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(curLeft, curY, curW, curH);
+          } else {
+            const offsetY = curY - GROUND_Y;
+            drawGroundSegmentsAndPits(nextF, offsetY);
+            const stonePop = clamp01((dropP - 0.72) / 0.28);
+            drawStonesList(nextF.stones, offsetY, stonePop);
+          }
+          return;
+        }
+
+        const appearRaw = clamp01((t - TRANS_SINK_DUR - TRANS_DROP_DUR) / TRANS_APPEAR_DUR);
+        const appearP = easeOutBack(appearRaw);
+        const upperOffsetY = lerp(-300, 0, appearP);
+
+        drawUpperPlatformAndCeiling(nextF, upperOffsetY, clamp01(appearRaw * 1.4));
+        drawStairsObj(nextF.stairs, upperOffsetY, false);
+        drawGroundSegmentsAndPits(nextF, 0);
+        drawStonesList(nextF.stones, 0, 1);
+      }
+
+      function drawPlayer() {
+        if (!player.visible) return;
+        if (gamePhase === GamePhase.PIT_DEAD) return;
+
+        ctx.save();
+        const cx = player.x + player.width / 2;
+        const bottomY = player.y + player.height;
+        const isHanging = player.state === PlayerState.HANGING;
+
+        if (player.invulnTimer > 0 && player.redFlashTimer <= 0 && !chordState.celebrating) {
+          if (Math.floor(gameTime * 16) % 2 === 0) {
+            ctx.globalAlpha = 0.55;
+          }
+        }
+
+        if (isHanging) {
+          ctx.translate(cx, player.y);
+          ctx.scale(player.squashX, player.squashY);
+          ctx.translate(0, player.height / 2);
+        } else {
+          ctx.translate(cx, bottomY);
+          ctx.scale(player.squashX, player.squashY);
+          ctx.translate(0, -player.height / 2);
+        }
+
+        const hw = player.width / 2;
+        const hh = player.height / 2;
+
+        if (isHanging) {
+          ctx.fillStyle = '#16a34a';
+          ctx.strokeStyle = '#14532d';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(-hw + 4, -hh + 1, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(hw - 4, -hh + 1, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        const walkOffset = player.grounded && Math.abs(player.vx) > 1 ? Math.sin(player.walkCycle) * 3.5 : 0;
+        const dangle = isHanging ? Math.sin(gameTime * 5) * 2 : 0;
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.arc(-6 + walkOffset + dangle, hh - 2, 4, 0, Math.PI * 2);
+        ctx.arc(6 - walkOffset + dangle, hh - 2, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        const bodyY = isHanging ? -hh + 3 : -hh;
+        const bodyH = player.height - 4;
+        drawRoundedRect(-hw, bodyY, player.width, bodyH, 7);
+
+        const flashingRed = player.redFlashTimer > 0 && Math.floor(gameTime * 24) % 2 === 0;
+        const flashingGood = player.goodFlashTimer > 0 && !flashingRed;
+        ctx.fillStyle = flashingRed ? '#ef4444' : flashingGood ? '#4ade80' : '#22c55e';
+        ctx.fill();
+
+        if (!flashingRed) {
+          ctx.fillStyle = 'rgba(187, 247, 208, 0.35)';
+          drawRoundedRect(-hw + 3, bodyY + 3, player.width - 6, 7, 3);
+          ctx.fill();
+        }
+
+        drawRoundedRect(-hw, bodyY, player.width, bodyH, 7);
+        ctx.strokeStyle = flashingRed ? '#991b1b' : flashingGood ? '#facc15' : '#14532d';
+        ctx.lineWidth = flashingGood ? 2.8 : 2.2;
+        ctx.stroke();
+
+        const eyeY = bodyY + 12;
+        const pupilShiftX = isHanging ? 0 : player.facing * 1.8;
+        const pupilShiftY = isHanging ? -1.4 : player.vy < -80 ? -1.2 : 0;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-5.5, eyeY, 4.6, 0, Math.PI * 2);
+        ctx.arc(5.5, eyeY, 4.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(-5.5 + pupilShiftX, eyeY + pupilShiftY, 2.2, 0, Math.PI * 2);
+        ctx.arc(5.5 + pupilShiftX, eyeY + pupilShiftY, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-6.4 + pupilShiftX, eyeY - 1 + pupilShiftY, 0.9, 0, Math.PI * 2);
+        ctx.arc(4.6 + pupilShiftX, eyeY - 1 + pupilShiftY, 0.9, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = flashingRed ? '#7f1d1d' : '#14532d';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        if (flashingRed) {
+          ctx.arc(0, bodyY + 21, 2.5, 0, Math.PI * 2);
+        } else {
+          ctx.arc(0, bodyY + 18.5, 3.6, 0.15 * Math.PI, 0.85 * Math.PI);
+        }
+        ctx.stroke();
+
+        if (player.isJumping && keys.space) {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-8, hh + 4);
+          ctx.lineTo(-8, hh + 11);
+          ctx.moveTo(8, hh + 4);
+          ctx.lineTo(8, hh + 11);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // In 三和弦 / 七和弦 mode, draw the green man's root note badge cleanly above (or below if hanging)
+        if (isChordMode() && chordState.degree) {
+          const activeDeg = chordState.celebrating ? chordState.celebrating.degree : chordState.degree;
+          const badgeY = isHanging ? player.y + player.height + 16 : player.y - 16;
+          drawNoteBadge(
+            cx,
+            badgeY,
+            fmtN(activeDeg.root),
+            '#dcfce7',
+            '#15803d',
+            '#14532d'
+          );
+        }
+      }
+
+      function drawParticlesAndTexts() {
+        for (const p of particles) {
+          const alpha = Math.max(0, p.life / p.maxLife);
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = p.color;
+          if (p.square) {
+            ctx.fillRect(p.x - p.radius / 2, p.y - p.radius / 2, p.radius, p.radius);
+          } else {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius * (0.5 + 0.5 * alpha), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        for (const ft of floatingTexts) {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+          ctx.font = 'bold 18px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.strokeStyle = '#0f172a';
+          ctx.lineWidth = 3.5;
+          ctx.strokeText(ft.text, ft.x, ft.y);
+          ctx.fillStyle = ft.color;
+          ctx.fillText(ft.text, ft.x, ft.y);
+          ctx.restore();
+        }
+      }
+
+      function drawChordHUD() {
+        if (!isChordMode() || !chordState.degree) return;
+
+        const celeb = chordState.celebrating;
+        const deg = celeb ? celeb.degree : chordState.degree;
+        const notes = celeb ? celeb.notes : chordState.targetNotes;
+        const collected = celeb ? notes.length : chordState.collectedCount;
+        const title = getChordTitle(deg, gameMode);
+
+        // Determine active arpeggio highlight index while celebrating
+        let hotIdx = -1;
+        let allHot = false;
+        if (celeb) {
+          const step = celeb.mode === GameMode.SEVENTH ? 0.23 : 0.26;
+          const strumAt = notes.length * step + 0.12;
+          if (celeb.timer >= strumAt) {
+            allHot = true;
+          } else {
+            hotIdx = Math.min(notes.length - 1, Math.floor(celeb.timer / step));
+          }
+        }
+
+        const slotW = 36;
+        const slotGap = 8;
+        const slotsTotalW = notes.length * slotW + (notes.length - 1) * slotGap;
+        const infoW = 112;
+        const cardW = infoW + slotsTotalW + 30;
+        const cardH = showChordHint ? 66 : 48;
+        const cardX = Math.round((W - cardW) / 2 + 65);
+        const cardY = 22;
+
+        ctx.save();
+        ctx.fillStyle = celeb ? 'rgba(20, 83, 45, 0.92)' : 'rgba(15, 23, 42, 0.84)';
+        drawRoundedRect(cardX, cardY, cardW, cardH, 10);
+        ctx.fill();
+        ctx.strokeStyle = celeb ? '#4ade80' : 'rgba(255, 255, 255, 0.22)';
+        ctx.lineWidth = celeb ? 2.2 : 1.5;
+        ctx.stroke();
+
+        // Chord title & degree on left of card
+        ctx.fillStyle = title.color;
+        ctx.font = 'bold 17px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(title.short, cardX + 12, cardY + 23);
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '600 11px sans-serif';
+        ctx.fillText(title.sub, cardX + 12, cardY + 39);
+
+        // Note progress slots
+        const startSlotX = cardX + infoW + 10;
+        const slotY = cardY + 10;
+        const slotH = 28;
+
+        for (let i = 0; i < notes.length; i++) {
+          const sx = startSlotX + i * (slotW + slotGap);
+          const isGot = i < collected;
+          const isNext = i === collected && !celeb;
+          const isHot = allHot || hotIdx === i;
+
+          drawRoundedRect(sx, slotY, slotW, slotH, 7);
+          if (isHot) {
+            ctx.fillStyle = '#facc15';
+          } else if (isGot) {
+            ctx.fillStyle = '#22c55e';
+          } else if (isNext) {
+            const pulse = 0.22 + 0.14 * Math.sin(gameTime * 7);
+            ctx.fillStyle = `rgba(250, 204, 21, ${pulse})`;
+          } else {
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+          }
+          ctx.fill();
+
+          ctx.strokeStyle = isHot
+            ? '#fef08a'
+            : isGot
+              ? '#86efac'
+              : isNext
+                ? '#facc15'
+                : 'rgba(148, 163, 184, 0.35)';
+          ctx.lineWidth = isNext || isHot ? 2 : 1.2;
+          ctx.stroke();
+
+          ctx.font = 'bold 15px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          if (isGot) {
+            ctx.fillStyle = isHot ? '#422006' : '#052e16';
+            ctx.fillText(fmtN(notes[i]), sx + slotW / 2, slotY + slotH / 2 + 1);
+          } else if (showChordHint) {
+            ctx.fillStyle = isNext ? 'rgba(254, 240, 138, 0.85)' : 'rgba(148, 163, 184, 0.65)';
+            ctx.fillText(fmtN(notes[i]), sx + slotW / 2, slotY + slotH / 2 + 1);
+          } else {
+            ctx.fillStyle = isNext ? '#fde047' : '#64748b';
+            ctx.fillText('?', sx + slotW / 2, slotY + slotH / 2 + 1);
+          }
+        }
+
+        // Optional hint footer (C Major mnemonic or solfege from BassChord-local)
+        if (showChordHint) {
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '600 11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(title.hintSub, cardX + cardW / 2, cardY + cardH - 8);
+        }
+
+        ctx.restore();
+      }
+
+      function drawHUD() {
+        ctx.save();
+        const shakeX = scoreFlashTimer > 0 ? Math.sin(gameTime * 55) * 3 : 0;
+
+        // Score badge at top-left at all times
+        ctx.fillStyle =
+          scoreFlashTimer > 0
+            ? 'rgba(185, 28, 28, 0.9)'
+            : scoreGoodFlashTimer > 0
+              ? 'rgba(21, 128, 61, 0.9)'
+              : 'rgba(15, 23, 42, 0.78)';
+        drawRoundedRect(14 + shakeX, 24, 138, 38, 9);
+        ctx.fill();
+        ctx.strokeStyle =
+          scoreFlashTimer > 0
+            ? '#fca5a5'
+            : scoreGoodFlashTimer > 0
+              ? '#86efac'
+              : 'rgba(255, 255, 255, 0.22)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Score: ${score}`, 26 + shakeX, 50);
+
+        // Current Floor badge
+        const displayFloor =
+          gamePhase === GamePhase.TRANSITIONING && transition
+            ? transition.nextFloor.floorNum
+            : currentFloorNum;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+        drawRoundedRect(160, 26, 86, 34, 8);
+        ctx.fill();
+        ctx.fillStyle = '#fde047';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Floor ${displayFloor}`, 203, 48);
+
+        // State indicator pill (ON_GROUND / HANGING)
+        const isHanging = player.state === PlayerState.HANGING;
+        ctx.fillStyle = isHanging ? 'rgba(22, 163, 74, 0.88)' : 'rgba(15, 23, 42, 0.62)';
+        drawRoundedRect(254, 29, 98, 28, 7);
+        ctx.fill();
+        ctx.fillStyle = isHanging ? '#dcfce7' : '#cbd5e1';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(isHanging ? 'HANGING' : 'ON_GROUND', 303, 47);
+
+        // Chord progress HUD in 三和弦 / 七和弦 modes
+        drawChordHUD();
+
+        // Controls banner
+        const bannerAlpha = controlsBannerTimer < 8 ? 0.86 : 0.64;
+        ctx.fillStyle = `rgba(15, 23, 42, ${bannerAlpha})`;
+        drawRoundedRect(130, H - 36, 700, 28, 7);
+        ctx.fill();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '600 13px sans-serif';
+        ctx.textAlign = 'center';
+        const controlText = isMobileDevice
+          ? isChordMode()
+            ? '左輪盤移動/爬梯 • 右輪盤長按跳躍 / 連按兩下倒掛 — 接正確和弦音！'
+            : 'Left wheel: Move / Climb  •  Right wheel: Hold to Jump, Double-tap to Hang'
+          : isChordMode()
+            ? 'Arrow keys to move, Space to jump, Double Space to hang — 接正確和弦音、閃避其他音！'
+            : 'Arrow keys to move, Space to jump, Double Space to hang, Up to climb stairs';
+        ctx.fillText(controlText, W / 2, H - 18);
+
+        // Restart hint top-right (desktop)
+        if (!isMobileDevice) {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.58)';
+          drawRoundedRect(W - 108, 26, 94, 26, 7);
+          ctx.fill();
+          ctx.fillStyle = '#e2e8f0';
+          ctx.font = '600 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('R: Restart', W - 61, 43);
+        }
+
+        ctx.restore();
+      }
+
+      function drawOverlays() {
+        if (gamePhase === GamePhase.PIT_DEAD) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.58)';
+          ctx.fillRect(0, 0, W, H);
+
+          ctx.fillStyle = '#0f172a';
+          drawRoundedRect(W / 2 - 215, H / 2 - 96, 430, 192, 14);
+          ctx.fill();
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+
+          ctx.fillStyle = '#fca5a5';
+          ctx.font = 'bold 30px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('You Fell Into a Pit!', W / 2, H / 2 - 44);
+
+          ctx.fillStyle = '#fef08a';
+          ctx.font = 'bold 16px sans-serif';
+          const statsLine = isChordMode()
+            ? `Floor ${currentFloorNum}  •  Score: ${score}  •  Chords: ${chordState.chordsCleared}`
+            : `Floor ${currentFloorNum}  •  Score: ${score}`;
+          ctx.fillText(statsLine, W / 2, H / 2 - 12);
+
+          ctx.fillStyle = '#22c55e';
+          drawRoundedRect(W / 2 - 118, H / 2 + 8, 236, 38, 9);
+          ctx.fill();
+          ctx.fillStyle = '#052e16';
+          ctx.font = 'bold 15px sans-serif';
+          ctx.fillText(`Respawn Floor ${currentFloorNum} (Enter / Click)`, W / 2, H / 2 + 32);
+
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '13px sans-serif';
+          ctx.fillText('Press R to restart from Floor 1', W / 2, H / 2 + 72);
+          ctx.restore();
+        }
+      }
+
+      function render() {
+        drawBackground();
+        drawTopRoof();
+
+        if (gamePhase === GamePhase.TRANSITIONING && transition) {
+          drawTransitionWorld();
+        } else {
+          drawUpperPlatformAndCeiling(floorData, 0, 1);
+          const showStairHint =
+            gamePhase === GamePhase.PLAYING &&
+            isNearStairs() &&
+            !player.onStairs &&
+            player.state === PlayerState.ON_GROUND;
+          drawStairsObj(floorData.stairs, 0, showStairHint);
+          drawGroundSegmentsAndPits(floorData, 0);
+          drawStonesList(floorData.stones, 0, 1);
+          drawBlackHoles();
+          drawRedCharacterList(redChars, 0);
+        }
+
+        drawPlayer();
+        drawParticlesAndTexts();
+        drawHUD();
+        drawOverlays();
+      }
+
+      // ============================================================
+      // MAIN LOOP
+      // ============================================================
+      let lastTimestamp = performance.now();
+      function loop(timestamp) {
+        const dt = Math.min(0.05, Math.max(0, (timestamp - lastTimestamp) / 1000));
+        lastTimestamp = timestamp;
+
+        syncMobileUI();
+        if (!isPortraitBlocked) {
+          update(dt);
+        }
+        render();
+
+        requestAnimationFrame(loop);
+      }
+
+      syncMobileUI();
+      resetLevel();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
