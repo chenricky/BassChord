@@ -318,3 +318,6 @@ svg .dot.t7{fill:#c792ea}
 #gameFull .gfframe{flex:1;min-height:0;width:100%;border:0;background:#141a26}
 /* 直拿又鎖不住橫向（例如 iPhone）：把畫面轉 90 度當橫向用 */
 #gameFull.rot #gameRot{inset:auto;top:0;left:0;width:100vh;height:100vw;padding:0;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}
+
+.dtable td.hl{color:var(--M);font-weight:700}
+.dtable td{padding:6px 4px}

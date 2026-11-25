@@ -1338,7 +1338,40 @@ function gameCloseFull() {
   try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch { /* 略過 */ }
 }
 
-const VIEWS = { game: viewGame, dist: viewDist, song7: viewSong, seventh: viewSeventh, hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
+function viewRelMinor() {
+  const sc = K.scale, minor = sc[5], major = sc[0];
+  const nm = i => fmtN(sc[i % 7]);
+  const row = (cells, cls) => `<tr>${cells.map((c, i) => `<td class="${cls(i)}">${c}</td>`).join('')}</tr>`;
+  const majHi = i => (i === 5 ? 'hl' : '');
+  const minHi = i => (i === 0 || i === 7 ? 'hl' : '');
+  const majNums = [1, 2, 3, 4, 5, 6, 7, 8];
+  const minNums = [6, 7, 1, 2, 3, 4, 5, 6];
+  return `
+  <h2>關係小調</h2>
+  <p class="sub">目前的調：<b>${fmtN(major)} 大調</b>（右上角可換調）。</p>
+  <div class="card">
+    <h3>${fmtN(major)} 大調音階</h3>
+    <table class="dtable"><tbody>
+      ${row([...sc, sc[0]].map(fmtN), majHi)}
+      ${row(majNums, majHi)}
+    </tbody></table>
+    <p>第 <b>6</b> 個音是 <b>${fmtN(minor)}</b>。以 ${fmtN(minor)} 當起點，把同一組音再唱一遍：</p>
+    <table class="dtable"><tbody>
+      ${row([5, 6, 7, 8, 9, 10, 11, 12].map(nm), minHi)}
+      ${row(minNums, minHi)}
+    </tbody></table>
+    <p><b>${fmtN(minor)}m</b>（${fmtN(minor)} 小調 / ${fmtN(minor)} minor）就是 <b>${fmtN(major)} 大調</b>（${fmtN(major)} major）的
+    <b>關係小調（Relative Minor）</b>。兩者用的是同一組音，只是起點不同。</p>
+  </div>
+  <div class="card">
+    <h3>例：《秋意濃》第一小節</h3>
+    <p>簡譜 <b>6 7 7</b> 的英文音名是 <b>${nm(5)} ${nm(6)} ${nm(6)}</b>。</p>
+    <p>和弦 <b>6m9</b> 是「六級和弦」，也就是 <b>${fmtN(minor)} 小調</b>和弦（${fmtN(minor)}m），再加上 7 音與 9 音的延伸音。</p>
+    <p class="sub">口訣：關係小調 = 大調的第 6 個音。簡譜裡的 6 就是它的根音。</p>
+  </div>`;
+}
+
+const VIEWS = { relm: viewRelMinor, game: viewGame, dist: viewDist, song7: viewSong, seventh: viewSeventh, hold: viewHold, pitch: viewPitch, chords: viewChords, board: viewBoard, song: viewSong, quiz: viewQuiz, notes: viewNotes };
 const $ = s => document.querySelector(s);
 
 function render() {
